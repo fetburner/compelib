@@ -1,4 +1,5 @@
 type t = { rank : int PArray.t; mutable parent : int PArray.t }
+type class_ = int
 
 let make n = { rank = PArray.make n 0; parent = PArray.init n (fun i -> i) }
 
