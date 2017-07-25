@@ -2,9 +2,8 @@
 let memoize n f =
   let dp = Hashtbl.create n in
   let rec get x =
-    match Hashtbl.find dp x with
-    | result -> result
-    | exception Not_found -> 
+    try Hashtbl.find dp x with
+    | Not_found ->
         let result = f get x in
         Hashtbl.add dp x result;
         result in
