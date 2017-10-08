@@ -10,9 +10,12 @@ module type S = sig
   val clear : elt -> t -> t
   val cardinal : t -> int
   val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+  val max_elt : t -> elt
+  val subset : t -> t -> bool
 end
 
-module Make (EltMap : Map.S) : S with type elt = EltMap.key = struct
+module Make (E : Set.OrderedType) : S with type elt = E.t = struct
+  module EltMap = Map.Make (E)
   type elt = EltMap.key
   type t = int EltMap.t
 
@@ -29,4 +32,6 @@ module Make (EltMap : Map.S) : S with type elt = EltMap.key = struct
   let clear = EltMap.remove
   let cardinal m = EltMap.fold (fun _ -> ( + )) m 0
   let fold f = EltMap.fold (fun x n -> Array.fold_right f (Array.make n x))
+  let max_elt m = fst (EltMap.max_binding m)
+    let subset m1 m2 = EltMap.for_all (fun x n1 -> n1 <= count x m2) m1
 end
