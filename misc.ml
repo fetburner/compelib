@@ -20,3 +20,5 @@ let rec fold_tournament dir f = function
       |> fold_tournament (not dir) f
 (* fold_tournament ( * ) [x1; x2; x3; x4; x5; x6; x7; x8 ... ] = (... (((x1 * x2) * (x3 * x4)) * ((x5 * x6) * (x7 * x8))) ...) * ( ... ) *)
 let fold_tournament f xs = fold_tournament true f xs
+
+let array_of_string s = Array.init (String.length s) (fun i -> s.[i])
