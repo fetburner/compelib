@@ -9,11 +9,11 @@ let rec gcd n m =
 
 let rec fold_tournament dir f = function
   | [x] -> x
-  | xs ->
+  | x :: xs ->
       List.fold_left (fun (acc, prev) x ->
         match prev with
         | None -> (acc, Some x)
-        | Some y -> ((if dir then f y x else f x y) :: acc, None)) ([], None) xs
+        | Some y -> ((if dir then f y x else f x y) :: acc, None)) ([], Some x) xs
       |> (function
           | (acc, None) -> acc
           | (acc, Some x) -> x :: acc)
