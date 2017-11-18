@@ -1,62 +1,86 @@
-module type SemiGroup = sig
+module type Monoid = sig
   type t
+  val e : t
   val op : t -> t -> t
 end
 
-module Make (S : SemiGroup) : sig
+module Make (S : Monoid) : sig
   type t
   type elt
-  (* f 0, ... f (n - 1)のn要素からなるセグ木を作る *)
-  val init : int -> (int -> elt) -> t
+  (* n要素の単位元からなるセグ木を作る *)
+  val make : int -> t
   (* 
    * update i f t
-   * i番目の要素x_iをf x_iに変更したセグ木を作る
+   * i番目の要素にfを適用したセグ木を作る
    *)
   val update : int -> (elt -> elt) -> t -> t
   (*
-   * find l r t
+   * update_range l r f t
+   * [l, r)の要素に自己準同型写像fを適用したセグ木を作る
+   *)
+  val update_range : int -> int -> (elt -> elt) -> t -> t
+  (*
+   * query l r t
    * [l, r)の要素の積を求める
    *)
-  val find : int -> int -> t -> elt
+  val query : int -> int -> t -> elt
 end with type elt = S.t = struct
   type elt = S.t
-  type t =
-    | Leaf of elt
-    | Node of int * elt * t * t
+  (* sizeがセグ木の要素数，dataは要素すべてをモノイドの演算で畳み込んだもの *)
+  type t = { size : int; data : elt; body : body lazy_t }
+  and body = Leaf | Node of t * t
 
-  (* セグ木の要素数 *)
-  let size = function
-    | Leaf _ -> 1
-    | Node (size, _, _, _) -> size
+  let make_node left right =
+    { size = left.size + right.size;
+      data = S.op left.data right.data;
+      body = lazy (Node (left, right)) }
 
-  (* セグ木の持っている要素全ての積 *)
-  let product = function
-    | Leaf product
-    | Node (_, product, _, _) -> product
-
-  let make_node l r =
-    Node (size l + size r, S.op (product l) (product r), l, r)
-
-  let rec init offset f = function
-    | 1 -> Leaf (f offset)
-    | n -> make_node (init offset f (n / 2)) (init (offset + n / 2) f ((n + 1) / 2))
-  let init n f = init 0 f n
+  let rec make n = 
+    assert (1 <= n);
+    { size = n;
+      data = S.e;
+      body = lazy
+        begin match n with
+        | 1 -> Leaf
+        | n -> Node (make (n / 2), make ((n + 1) / 2))
+        end }
 
   let rec update i f t =
-    assert (0 <= i && i < size t);
+    assert (0 <= i && i < t.size);
     match t with
-    | Leaf x -> Leaf (f x)
-    | Node (_, _, l, r) ->
-        if i < size l then make_node (update i f l) r
-        else make_node l (update (i - size l) f r)
+    | { body = lazy Leaf } -> { t with data = f t.data }
+    | { body = lazy (Node (left, right)) } ->
+        if i < left.size then make_node (update i f left) right
+        else make_node left (update (i - left.size) f right)
 
-  let rec find l r t =
-    assert (0 <= l && l < r && r <= size t);
+  let rec update_range l r f t =
+    assert (0 <= l && l < r && r <= t.size);
     match t with
-    | Leaf x -> x
-    | Node (_, _, left, right) ->
-        if l = 0 && r = size t then product t
-        else if r <= size left then find l r left
-        else if size left <= l then find (l - size left) (r - size left) right
-        else S.op (find l (size left) left) (find 0 (r - size left) right)
+    | { body = lazy Leaf } -> { t with data = f t.data }
+    | { body = lazy (Node (left, right)) } ->
+        if l <= 0 && t.size <= r then
+          { t with
+            data = f t.data;
+            body = lazy
+              (Node
+                (update_range 0 left.size f left,
+                 update_range 0 right.size f right)) }
+        else if r <= left.size then
+          make_node (update_range l r f left) right
+        else if left.size <= l then
+          make_node left (update_range (l - left.size) (r - left.size) f right)
+        else
+          make_node
+            (update_range l left.size f left)
+            (update_range 0 (r - left.size) f right)
+
+  let rec query l r t =
+    assert (0 <= l && l < r && r <= t.size);
+    match t with
+    | { body = lazy Leaf } -> t.data
+    | { body = lazy (Node (left, right)) } ->
+        if l <= 0 && t.size <= r then t.data
+        else if r <= left.size then query l r left
+        else if left.size <= l then query (l - left.size) (r - left.size) right
+        else S.op (query l left.size left) (query 0 (r - left.size) right)
 end
