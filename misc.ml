@@ -22,3 +22,9 @@ let rec fold_tournament dir f = function
 let fold_tournament f xs = fold_tournament true f xs
 
 let array_of_string s = Array.init (String.length s) (fun i -> s.[i])
+
+exception Exodus
+let call_cc f =
+  let return = ref (fun () -> raise Not_found) in
+  try f (fun x -> (return := fun () -> x); raise Exodus)
+  with Exodus -> !return ()
