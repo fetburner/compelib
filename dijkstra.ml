@@ -33,7 +33,7 @@ struct
 
   (* ヒープから要素を削除 *)
   let remove k p pk =
-    let kset = WMap.find p pk in
+    let kset = try WMap.find p pk with Not_found -> VSet.empty in
     if VSet.cardinal kset <= 1
     then WMap.remove p pk
     else WMap.add p (VSet.remove k kset) pk
@@ -49,7 +49,7 @@ struct
             (* c は頂点 v から頂点 u への辺の重み *)
             let open Weight in
             (* w' = d.(u) *)
-            let w' = VMap.find u d in
+            let w' = try VMap.find u d with Not_found -> inf in
             (* d.(u) <= d.(v) + c *)
             if 0 <= compare (w + c) w'
             then (q, d)
@@ -58,14 +58,9 @@ struct
   let rec dijkstra vs e s =
     let d =
       dijkstra_aux e
-        (WMap.add Weight.zero (VSet.singleton s)
-          (WMap.singleton Weight.inf
-            (VSet.remove s
-              (List.fold_right VSet.add vs VSet.empty))),
-         VMap.add s Weight.zero
-           (List.fold_right (fun v ->
-             VMap.add v Weight.inf) vs VMap.empty)) in
-    fun v -> VMap.find v d
+        (WMap.singleton Weight.zero (VSet.singleton s),
+         VMap.singleton s Weight.zero) in
+    fun v -> try VMap.find v d with Not_found -> Weight.inf
 end
 
 (* sample code *)
