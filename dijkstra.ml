@@ -12,8 +12,11 @@ module WeightedDirectedGraph
   end) :
 sig
   val dijkstra :
+    (* 頂点のリスト *)
     Vertex.t list ->
+    (* 隣接リスト *)
     (Vertex.t -> (Vertex.t * Weight.t) list) ->
+    (* 始点 *)
     Vertex.t ->
     (Vertex.t -> Weight.t)
 end =
