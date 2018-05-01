@@ -1,43 +1,92 @@
-(* quite naive implementation *)
-let rec dikjstra ( +. ) ( < ) q edge d =
-  match q with
-  | [] -> ()
-  | u :: q ->
-      let u, q = 
-        List.fold_left (fun (u, q') u' ->
-          if d.(u) < d.(u') then (u, u' :: q')
-          else (u', u :: q')) (u, []) q in
-      List.iter (fun (v, c) ->
-        if c +. d.(u) < d.(v) then
-          d.(v) <- c +. d.(u)) (edge u);
-      dikjstra ( +. ) ( < ) q edge d
+module WeightedDirectedGraph
+  (Vertex : sig
+    type t
+    val compare : t -> t -> int
+  end)
+  (Weight : sig
+    type t
+    val inf : t
+    val zero : t
+    val ( + ) : t -> t -> t
+    val compare : t -> t -> int
+  end) :
+sig
+  val dijkstra :
+    Vertex.t list ->
+    (Vertex.t -> (Vertex.t * Weight.t) list) ->
+    Vertex.t ->
+    (Vertex.t -> Weight.t)
+end =
+struct
+  module WMap = Map.Make (Weight)
+  module VSet = Set.Make (Vertex)
+  module VMap = Map.Make (Vertex)
 
+  (* ヒープに要素を追加 *)
+  let add k p pk =
+    WMap.add p
+      (VSet.add k
+        (try WMap.find p pk with Not_found -> VSet.empty)) pk
+
+  (* ヒープから要素を削除 *)
+  let remove k p pk =
+    let kset = WMap.find p pk in
+    if VSet.cardinal kset <= 1
+    then WMap.remove p pk
+    else WMap.add p (VSet.remove k kset) pk
+
+  (* ダイクストラ法のメインループ *)
+  let rec dijkstra_aux e (q, d) =
+    match WMap.min_binding q with
+    | exception Not_found -> d
+    | (w, vs) ->
+        dijkstra_aux e @@ VSet.fold (fun v ->
+          (* w = d.(v) *)
+          List.fold_right (fun (u, c) (q, d) ->
+            (* c は頂点 v から頂点 u への辺の重み *)
+            let open Weight in
+            (* w' = d.(u) *)
+            let w' = VMap.find u d in
+            (* d.(u) <= d.(v) + c *)
+            if 0 <= compare (w + c) w'
+            then (q, d)
+            else (add u (w + c) (remove u w' q), VMap.add u (w + c) d)) (e v)) vs (WMap.remove w q, d)
+
+  let rec dijkstra vs e s =
+    let d =
+      dijkstra_aux e
+        (WMap.add Weight.zero (VSet.singleton s)
+          (WMap.singleton Weight.inf
+            (VSet.remove s
+              (List.fold_right VSet.add vs VSet.empty))),
+         VMap.add s Weight.zero
+           (List.fold_right (fun v ->
+             VMap.add v Weight.inf) vs VMap.empty)) in
+    fun v -> VMap.find v d
+end
 
 (* sample code *)
-let d = Array.make 6 infinity;;
-d.(0) <- 0.;;
-dikjstra ( +. ) ( < ) [0; 1; 2; 3; 4; 5] (function
+
+module Int = struct
+  type t = int
+  let compare = compare
+end
+
+module Float = struct
+  type t = float
+  let zero = 0.
+  let inf = infinity
+  let ( + ) = ( +. )
+  let compare = compare
+end
+
+module G = WeightedDirectedGraph (Int) (Float)
+
+let d = G.dijkstra [0; 1; 2; 3; 4; 5] (function
   | 0 -> [ (1, 7.); (2, 9.); (5, 14.) ]
   | 1 -> [ (0, 7.); (2, 10.); (3, 15.) ]
   | 2 -> [ (0, 9.); (1, 10.); (3, 11.); (5, 2.) ]
   | 3 -> [ (1, 15.); (2, 11.); (4, 6.) ]
   | 4 -> [ (3, 6.); (5, 9.) ]
-  | 5 -> [ (0, 14.); (2, 2.); (4, 9.) ]) d;;
-d;;
-
-let d = Array.make 6 (infinity, []);;
-d.(0) <- (0., []);;
-dikjstra
-  (fun (c, r) (c', rs) -> (c +. c', r :: rs))
-  (fun (c, _) (c', _) -> c < c')
-  [0; 1; 2; 3; 4; 5]
-  (function
-    | 0 -> [ (1, (7., "0->1")); (2, (9., "0->2")); (5, (14., "0->5")) ]
-    | 1 -> [ (0, (7., "1->0")); (2, (10., "1->2")); (3, (15., "1->3")) ]
-    | 2 -> [ (0, (9., "2->0")); (1, (10., "2->1")); (3, (11., "2->3"));
-        (5, (2., "2->5")) ]
-    | 3 -> [ (1, (15., "3->1")); (2, (11., "3->2")); (4, (6., "3->4")) ]
-    | 4 -> [ (3, (6., "4->3")); (5, (9., "4->5")) ]
-    | 5 -> [ (0, (14., "5->0")); (2, (2., "5->2")); (4, (9., "5->4")) ]) d;;
-d;;
-
+  | 5 -> [ (0, 14.); (2, 2.); (4, 9.) ]) 0;;
+Array.init 6 d
