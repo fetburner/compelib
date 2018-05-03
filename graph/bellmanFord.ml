@@ -52,9 +52,7 @@ end
 
 module G = WeightedDirectedGraph (struct
   type t = float
-  let inf = infinity
   let zero = 0.
-  let neg_inf = neg_infinity
   let ( + ) = ( +. )
   let compare = compare
 end)

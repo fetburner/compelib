@@ -5,7 +5,6 @@ module WeightedDirectedGraph
   end)
   (Weight : sig
     type t
-    val inf : t
     val zero : t
     val ( + ) : t -> t -> t
     val compare : t -> t -> int
@@ -16,7 +15,8 @@ sig
     (Vertex.t -> (Vertex.t * Weight.t) list) ->
     (* 始点 *)
     Vertex.t ->
-    (Vertex.t -> Weight.t)
+    (* 始点から辿り着けなければNoneを返す *)
+    (Vertex.t -> Weight.t option)
 end =
 struct
   module WMap = Map.Make (Weight)
@@ -37,6 +37,7 @@ struct
     else WMap.add p (VSet.remove k kset) pk
 
   (* ダイクストラ法のメインループ *)
+  (* d に入っていない頂点への距離は無限大とみなす *)
   let rec dijkstra_aux e (q, d) =
     match WMap.min_binding q with
     | exception Not_found -> d
@@ -46,43 +47,40 @@ struct
           List.fold_right (fun (u, c) (q, d) ->
             (* c は頂点 v から頂点 u への辺の重み *)
             let open Weight in
-            (* w' = d.(u) *)
-            let w' = try VMap.find u d with Not_found -> inf in
-            (* d.(u) <= d.(v) + c *)
-            if 0 <= compare (w + c) w'
-            then (q, d)
-            else (add u (w + c) (remove u w' q), VMap.add u (w + c) d)) (e v)) vs (WMap.remove w q, d)
+            match VMap.find u d with
+            | exception Not_found -> (* d.(u) は無限大 *)
+                (add u (w + c) q, VMap.add u (w + c) d)
+            | w' ->
+                (* w' = d.(u) *)
+                (* d.(u) <= d.(v) + c *)
+                if 0 <= compare (w + c) w'
+                then (q, d)
+                else (add u (w + c) (remove u w' q), VMap.add u (w + c) d)) (e v)) vs (WMap.remove w q, d)
 
   let rec dijkstra e s =
     let d =
       dijkstra_aux e
         (WMap.singleton Weight.zero (VSet.singleton s),
          VMap.singleton s Weight.zero) in
-    fun v -> try VMap.find v d with Not_found -> Weight.inf
+    fun v -> try Some (VMap.find v d) with Not_found -> None
 end
 
 (* sample code *)
 
 module Int = struct
   type t = int
+  let zero = 0
+  let ( + ) = ( + )
   let compare = compare
 end
 
-module Float = struct
-  type t = float
-  let zero = 0.
-  let inf = infinity
-  let ( + ) = ( +. )
-  let compare = compare
-end
-
-module G = WeightedDirectedGraph (Int) (Float)
+module G = WeightedDirectedGraph (Int) (Int)
 
 let d = G.dijkstra (function
-  | 0 -> [ (1, 7.); (2, 9.); (5, 14.) ]
-  | 1 -> [ (0, 7.); (2, 10.); (3, 15.) ]
-  | 2 -> [ (0, 9.); (1, 10.); (3, 11.); (5, 2.) ]
-  | 3 -> [ (1, 15.); (2, 11.); (4, 6.) ]
-  | 4 -> [ (3, 6.); (5, 9.) ]
-  | 5 -> [ (0, 14.); (2, 2.); (4, 9.) ]) 0;;
-Array.init 6 d
+  | 0 -> [ (1, 7); (2, 9); (5, 14) ]
+  | 1 -> [ (0, 7); (2, 10); (3, 15) ]
+  | 2 -> [ (0, 9); (1, 10); (3, 11); (5, 2) ]
+  | 3 -> [ (1, 15); (2, 11); (4, 6) ]
+  | 4 -> [ (3, 6); (5, 9) ]
+  | 5 -> [ (0, 14); (2, 2); (4, 9) ]) 0;;
+Array.init 7 d

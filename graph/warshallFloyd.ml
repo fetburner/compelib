@@ -1,7 +1,6 @@
 module WeightedDirectedGraph
   (Weight : sig
     type t
-    val inf : t
     val zero : t
     val min : t -> t -> t
     val ( + ) : t -> t -> t
@@ -12,7 +11,8 @@ sig
     'v list ->
     (* 辺のリスト *)
     ('v * 'v * Weight.t) list ->
-    ('v -> 'v -> Weight.t)
+    (* 辿り着けなければNoneを返す *)
+    ('v -> 'v -> Weight.t option)
 end =
 struct
   let warshall_floyd vs es =
@@ -40,23 +40,22 @@ struct
                 with Not_found ->
                   (* d.(j).(k) は無限大 *)
                   djk') vs) vs) vs;
-    fun u v -> try Hashtbl.find d (u, v) with Not_found -> Weight.inf
+    fun u v -> try Some (Hashtbl.find d (u, v)) with Not_found -> None
 end
 
 (* sample code *)
 
 module G = WeightedDirectedGraph (struct
-  type t = float
-  let inf = infinity
-  let zero = 0.
+  type t = int
+  let zero = 0
   let min = min
-  let ( + ) = ( +. )
+  let ( + ) = ( + )
 end)
 
-let d = G.warshall_floyd [0; 1; 2; 3; 4]
-  [ (0, 1, 4.); (0, 4, 3.);
-    (1, 0, 4.); (1, 2, 2.);
-    (2, 1, 2.); (2, 3, 3.); (2, 4, 2.);
-    (3, 2, 3.); (3, 4, 7.);
-    (4, 0, 3.); (4, 2, 2.); (4, 3, 7.) ];;
-Array.init 5 (fun i -> Array.init 5 (d i));;
+let d = G.warshall_floyd [0; 1; 2; 3; 4; 5]
+  [ (0, 1, 4); (0, 4, 3);
+    (1, 0, 4); (1, 2, 2);
+    (2, 1, 2); (2, 3, 3); (2, 4, 2);
+    (3, 2, 3); (3, 4, 7);
+    (4, 0, 3); (4, 2, 2); (4, 3, 7) ];;
+Array.init 6 (fun i -> Array.init 6 (d i));;
