@@ -12,8 +12,6 @@ module WeightedDirectedGraph
   end) :
 sig
   val dijkstra :
-    (* 頂点のリスト *)
-    Vertex.t list ->
     (* 隣接リスト *)
     (Vertex.t -> (Vertex.t * Weight.t) list) ->
     (* 始点 *)
@@ -55,7 +53,7 @@ struct
             then (q, d)
             else (add u (w + c) (remove u w' q), VMap.add u (w + c) d)) (e v)) vs (WMap.remove w q, d)
 
-  let rec dijkstra vs e s =
+  let rec dijkstra e s =
     let d =
       dijkstra_aux e
         (WMap.singleton Weight.zero (VSet.singleton s),
@@ -80,7 +78,7 @@ end
 
 module G = WeightedDirectedGraph (Int) (Float)
 
-let d = G.dijkstra [0; 1; 2; 3; 4; 5] (function
+let d = G.dijkstra (function
   | 0 -> [ (1, 7.); (2, 9.); (5, 14.) ]
   | 1 -> [ (0, 7.); (2, 10.); (3, 15.) ]
   | 2 -> [ (0, 9.); (1, 10.); (3, 11.); (5, 2.) ]
