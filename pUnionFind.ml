@@ -1,13 +1,14 @@
+(* 永続ハッシュテーブルを用いた永続素集合データ構造 *)
 module PUnionFind
   (Index : sig
     type t
     val compare : t -> t -> int
   end) :
 sig
-  (* persistent union-find data structure *)
   type t
   type class_
 
+  (* n要素の永続素集合データ構造を作るが，ハッシュなのでn要素以上も入れられる *)
   val make : int -> t
   val find : t -> Index.t -> class_
   val union : t -> Index.t -> Index.t -> t
