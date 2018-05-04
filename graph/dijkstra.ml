@@ -20,7 +20,6 @@ sig
 end =
 struct
   module WMap = Map.Make (Weight)
-  module VSet = Set.Make (Vertex)
   module VMap = Map.Make (Vertex)
 
   (* ダイクストラ法のメインループ *)

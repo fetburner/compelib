@@ -1,4 +1,8 @@
 module WeightedDirectedGraph
+  (Vertex : sig
+    type t
+    val compare : t -> t -> int
+  end)
   (Weight : sig
     type t
     val zero : t
@@ -16,15 +20,16 @@ sig
     (* 辿り着けなければNoneを返す *)
     (int -> int -> Weight.t option)
 
+  (* 座標圧縮により，頂点に様々な型を使えるようにしたバージョン *)
   val warshall_floyd :
-    (* 頂点のリスト *)
-    'v list ->
     (* 辺のリスト *)
-    ('v * 'v * Weight.t) list ->
+    (Vertex.t * Vertex.t * Weight.t) list ->
     (* 辿り着けなければNoneを返す *)
-    ('v -> 'v -> Weight.t option)
+    (Vertex.t -> Vertex.t -> Weight.t option)
 end =
 struct
+  module CC = CoordComp (Vertex)
+
   let raw_warshall_floyd n es =
     (* 準備 *)
     (* Noneで無限を表す *)
@@ -52,42 +57,28 @@ struct
       then None
       else d.(u).(v)
 
-  let warshall_floyd vs es =
-    (* 準備 *)
-    (* dに入ってない2頂点の距離は無限とみなす *)
+  let warshall_floyd es =
+    let (n, comp, _) =
+      CC.compress @@
+        List.concat @@
+          List.map (fun (u, v, _) -> [u; v]) es in
     let d =
-      let n = List.length vs in
-      Hashtbl.create (n * n) in
-    List.iter (fun (u, v, c) ->
-      Hashtbl.replace d (u, v) c) es;
-    List.iter (fun v ->
-      Hashtbl.replace d (v, v) Weight.zero) vs;
-    (* メインループ *)
-    List.iter (fun i ->
-      List.iter (fun j ->
-        List.iter (fun k ->
-          (* d.(j).(k) <- min d.(j).(k) (d.(j).(i) + d.(i).(k)) *)
-          let open Weight in
-          match Hashtbl.find d (j, i) + Hashtbl.find d (i, k) with
-          | exception Not_found -> () (* d.(j).(i) + d.(i).(k) は無限大 *)
-          | djk' ->
-              (* djk' = d.(j).(i) + d.(i).(k) *)
-              if
-                (* d.(j).(k) > d.(j).(i) + d.(i).(k) *)
-                try 0 < compare (Hashtbl.find d (j, k)) djk'
-                with Not_found -> true (* d.(j).(k) は無限大 *)
-              then Hashtbl.replace d (j, k) djk') vs) vs) vs;
-    fun u v -> try Some (Hashtbl.find d (u, v)) with Not_found -> None
+      raw_warshall_floyd n @@
+        List.map (fun (u, v, c) -> (comp u, comp v, c)) es in
+    fun u v ->
+      try d (comp u) (comp v) with Not_found -> None
 end
 
 (* sample code *)
 
-module G = WeightedDirectedGraph (struct
+module Int = struct
   type t = int
   let zero = 0
   let ( + ) = ( + )
   let compare = compare
-end)
+end
+
+module G = WeightedDirectedGraph (Int) (Int)
 
 let d = G.raw_warshall_floyd 6
   [ (0, 1, 4); (0, 4, 3);
@@ -97,7 +88,7 @@ let d = G.raw_warshall_floyd 6
     (4, 0, 3); (4, 2, 2); (4, 3, 7) ];;
 Array.init 6 (fun i -> Array.init 6 (d i));;
 
-let d = G.warshall_floyd [0; 1; 2; 3; 4; 5]
+let d = G.warshall_floyd
   [ (0, 1, 4); (0, 4, 3);
     (1, 0, 4); (1, 2, 2);
     (2, 1, 2); (2, 3, 3); (2, 4, 2);
