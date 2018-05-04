@@ -37,4 +37,9 @@ end)
 let l = [100; 200; 300; 400]
 let n, f, g = CC.compress l;;
 List.map f l;;
-Array.init 4 g;;
+Array.init n g;;
+
+let l = [100; 100; 100]
+let n, f, g = CC.compress l;;
+List.map f l;;
+Array.init n g;;
