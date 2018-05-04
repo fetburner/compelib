@@ -6,6 +6,16 @@ module WeightedDirectedGraph
     val compare : t -> t -> int
   end) :
 sig
+  (* 配列版の実装 *)
+  val raw_warshall_floyd :
+    (* 頂点の数n *)
+    int ->
+    (* 辺のリスト *)
+    (* 頂点は0からn-1まで整数でなくてはならない *)
+    (int * int * Weight.t) list ->
+    (* 辿り着けなければNoneを返す *)
+    (int -> int -> Weight.t option)
+
   val warshall_floyd :
     (* 頂点のリスト *)
     'v list ->
@@ -15,6 +25,33 @@ sig
     ('v -> 'v -> Weight.t option)
 end =
 struct
+  let raw_warshall_floyd n es =
+    (* 準備 *)
+    (* Noneで無限を表す *)
+    let d = Array.make_matrix n n None in
+    List.iter (fun (u, v, c) -> d.(u).(v) <- Some c) es;
+    for v = 0 to n - 1 do
+      d.(v).(v) <- Some Weight.zero
+    done;
+    for i = 0 to n - 1 do
+      for j = 0 to n - 1 do
+        for k = 0 to n - 1 do
+          (* d.(j).(k) <- min d.(j).(k) (d.(j).(i) + d.(i).(k)) *)
+          let open Weight in
+          match d.(j).(k), d.(j).(i), d.(i).(k) with
+          | _, None, _ -> ()
+          | _, _, None -> ()
+          (* d.(j).(k) <= d.(j).(i) + d.(i).(k) *)
+          | Some djk, Some dji, Some dik when compare djk (dji + dik) <= 0 -> ()
+          | _, Some dji, Some dik -> d.(j).(k) <- Some (dji + dik)
+        done
+      done
+    done;
+    fun u v ->
+      if u < 0 || n <= u || v < 0 || n <= v
+      then None
+      else d.(u).(v)
+
   let warshall_floyd vs es =
     (* 準備 *)
     (* dに入ってない2頂点の距離は無限とみなす *)
@@ -51,6 +88,14 @@ module G = WeightedDirectedGraph (struct
   let ( + ) = ( + )
   let compare = compare
 end)
+
+let d = G.raw_warshall_floyd 6
+  [ (0, 1, 4); (0, 4, 3);
+    (1, 0, 4); (1, 2, 2);
+    (2, 1, 2); (2, 3, 3); (2, 4, 2);
+    (3, 2, 3); (3, 4, 7);
+    (4, 0, 3); (4, 2, 2); (4, 3, 7) ];;
+Array.init 6 (fun i -> Array.init 6 (d i));;
 
 let d = G.warshall_floyd [0; 1; 2; 3; 4; 5]
   [ (0, 1, 4); (0, 4, 3);
