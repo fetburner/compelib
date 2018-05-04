@@ -2,8 +2,8 @@ module WeightedDirectedGraph
   (Weight : sig
     type t
     val zero : t
-    val min : t -> t -> t
     val ( + ) : t -> t -> t
+    val compare : t -> t -> int
   end) :
 sig
   val warshall_floyd :
@@ -35,11 +35,11 @@ struct
           | exception Not_found -> () (* d.(j).(i) + d.(i).(k) は無限大 *)
           | djk' ->
               (* djk' = d.(j).(i) + d.(i).(k) *)
-              Hashtbl.replace d (j, k) @@
-                try min djk' (Hashtbl.find d (j, k))
-                with Not_found ->
-                  (* d.(j).(k) は無限大 *)
-                  djk') vs) vs) vs;
+              if
+                (* d.(j).(k) > d.(j).(i) + d.(i).(k) *)
+                try 0 < compare (Hashtbl.find d (j, k)) djk'
+                with Not_found -> true (* d.(j).(k) は無限大 *)
+              then Hashtbl.replace d (j, k) djk') vs) vs) vs;
     fun u v -> try Some (Hashtbl.find d (u, v)) with Not_found -> None
 end
 
@@ -48,8 +48,8 @@ end
 module G = WeightedDirectedGraph (struct
   type t = int
   let zero = 0
-  let min = min
   let ( + ) = ( + )
+  let compare = compare
 end)
 
 let d = G.warshall_floyd [0; 1; 2; 3; 4; 5]
