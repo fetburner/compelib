@@ -50,9 +50,9 @@ struct
         | Some dv, Some du when compare dv (du + c) <= 0 -> ()
         | _, Some du ->
             d.(v) <- Some (du + c);
-              (* n 回目以降に変更が起こった場合，v までの経路に負閉路が含まれている *)
-              if n - 1 <= i then
-                neg.(v) <- true) es
+            (* n 回目以降に変更が起こった場合，v までの経路に負閉路が含まれている *)
+            if n - 1 <= i then
+              neg.(v) <- true) es
     done;
     fun v ->
       if neg.(v) then `NegInf
