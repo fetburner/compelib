@@ -42,16 +42,3 @@ end = struct
   let compare_class = compare
 end
 
-let () =
-  let n, q = Scanf.scanf "%d %d\n" (fun n q -> n, q) in
-  let uf = RawUnionFind.make n in
-  for i = 0 to q - 1 do
-    Scanf.scanf "%d %d %d\n" (fun p a b ->
-      match p with
-      | 0 -> RawUnionFind.unite uf a b
-      | 1 ->
-          if RawUnionFind.find uf a = RawUnionFind.find uf b then
-            print_endline "Yes"
-          else
-            print_endline "No")
-  done
