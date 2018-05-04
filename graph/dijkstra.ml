@@ -23,44 +23,30 @@ struct
   module VSet = Set.Make (Vertex)
   module VMap = Map.Make (Vertex)
 
-  (* ヒープに要素を追加 *)
-  let add k p pk =
-    WMap.add p
-      (VSet.add k
-        (try WMap.find p pk with Not_found -> VSet.empty)) pk
-
-  (* ヒープから要素を削除 *)
-  let remove k p pk =
-    let kset = try WMap.find p pk with Not_found -> VSet.empty in
-    if VSet.cardinal kset <= 1
-    then WMap.remove p pk
-    else WMap.add p (VSet.remove k kset) pk
-
   (* ダイクストラ法のメインループ *)
   (* d に入っていない頂点への距離は無限大とみなす *)
   let rec dijkstra_aux e (q, d) =
     match WMap.min_binding q with
     | exception Not_found -> d
     | (w, vs) ->
-        dijkstra_aux e @@ VSet.fold (fun v ->
+        dijkstra_aux e @@ List.fold_right (fun v ->
           (* w = d.(v) *)
           List.fold_right (fun (u, c) (q, d) ->
             (* c は頂点 v から頂点 u への辺の重み *)
             let open Weight in
-            match VMap.find u d with
-            | exception Not_found -> (* d.(u) は無限大 *)
-                (add u (w + c) q, VMap.add u (w + c) d)
-            | w' ->
-                (* w' = d.(u) *)
-                (* d.(u) <= d.(v) + c *)
-                if 0 <= compare (w + c) w'
-                then (q, d)
-                else (add u (w + c) (remove u w' q), VMap.add u (w + c) d)) (e v)) vs (WMap.remove w q, d)
+            if
+              (* d.(u) <= d.(v) + c *)
+              try 0 <= compare (w + c) (VMap.find u d)
+              with Not_found -> false (* d.(u) は無限大 *)
+            then (q, d)
+            else
+              (WMap.add (w + c) (u :: try WMap.find (w + c) q with Not_found -> []) q,
+               VMap.add u (w + c) d)) (e v)) vs (WMap.remove w q, d)
 
   let rec dijkstra e s =
     let d =
       dijkstra_aux e
-        (WMap.singleton Weight.zero (VSet.singleton s),
+        (WMap.singleton Weight.zero [s],
          VMap.singleton s Weight.zero) in
     fun v -> try Some (VMap.find v d) with Not_found -> None
 end
