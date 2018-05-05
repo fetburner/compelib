@@ -4,7 +4,7 @@ let rec select acc trace = function
 let select xs = select [] [] xs
 
 (* 与えられたリストからn要素を選ぶ順列 *)
-let rec perm n xs =
+let rec perm : int -> 'a list -> 'a list list = fun n xs ->
   match n, xs with
   | 0, _ -> [[]]
   | _, [] -> []

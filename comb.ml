@@ -4,7 +4,7 @@ let rec comb acc xs n ys =
   | _, [] -> acc
   | n, y :: ys -> comb (comb acc xs n ys) (y :: xs) (n - 1) ys
 (* 与えられたリストからn要素を選ぶ組み合わせを列挙 *)
-let comb n xs = comb [] [] n xs
+let comb : int -> 'a list -> 'a list list = fun n xs -> comb [] [] n xs
 
 (* sample code *)
 comb 2 [1; 2; 3];;
