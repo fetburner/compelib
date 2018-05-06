@@ -29,33 +29,27 @@ sig
 end =
 struct
   module CC = CoordComp (Vertex)
+  module Weight' = WithInf (Weight)
 
   let raw_warshall_floyd n es =
     (* 準備 *)
     (* Noneで無限を表す *)
-    let d = Array.make_matrix n n None in
+    let d = Array.make_matrix n n Weight'.inf in
     List.iter (fun (u, v, c) -> d.(u).(v) <- Some c) es;
     for v = 0 to n - 1 do
-      d.(v).(v) <- Some Weight.zero
+      d.(v).(v) <- Weight'.zero
     done;
     for i = 0 to n - 1 do
       for j = 0 to n - 1 do
         for k = 0 to n - 1 do
-          (* d.(j).(k) <- min d.(j).(k) (d.(j).(i) + d.(i).(k)) *)
-          let open Weight in
-          match d.(j).(k), d.(j).(i), d.(i).(k) with
-          | _, None, _ -> ()
-          | _, _, None -> ()
-          (* d.(j).(k) <= d.(j).(i) + d.(i).(k) *)
-          | Some djk, Some dji, Some dik when compare djk (dji + dik) <= 0 -> ()
-          | _, Some dji, Some dik -> d.(j).(k) <- Some (dji + dik)
+          let open Weight' in
+          (* d.(j).(i) + d.(i).(k) < d.(j).(k) *)
+          if 0 < compare d.(j).(k) (d.(j).(i) + d.(i).(k)) then
+            d.(j).(k) <- d.(j).(i) + d.(i).(k)
         done
       done
     done;
-    fun u v ->
-      if u < 0 || n <= u || v < 0 || n <= v
-      then None
-      else d.(u).(v)
+    fun u v -> try d.(u).(v) with _ -> Weight'.inf
 
   let warshall_floyd es =
     let (n, comp, _) =

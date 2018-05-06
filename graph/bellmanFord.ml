@@ -31,42 +31,46 @@ sig
 end =
 struct
   module CC = CoordComp (Vertex)
+  module Weight' = WithInf (Weight)
 
   let raw_bellman_ford n es s =
     (* 距離を覚えるやつ *)
-    (* Noneで無限を表す *)
-    let d = Array.make n None in
+    let d = Array.make n Weight'.inf in
     (* 経路に負閉路が含まれる頂点を覚えるやつ *)
     let neg = Array.make n false in
-    d.(s) <- Some Weight.zero;
+    d.(s) <- Weight'.zero;
     for i = 0 to 2 * n - 1 do
       List.iter (fun (u, v, c) ->
+        let open Weight' in
         (* c は u から v への辺の重さ *)
-        (* d.(v) <- min d.(v) (d.(u) + c) *)
-        let open Weight in
-        match d.(v), d.(u) with
-        | _, None -> () (* d.(u) は無限大 *)
-        (* d.(v) <= d.(u) + c *)
-        | Some dv, Some du when compare dv (du + c) <= 0 -> ()
-        | _, Some du ->
-            d.(v) <- Some (du + c);
+        (* d.(u) + c < d.(v) *)
+        if 0 < compare d.(v) (d.(u) + Some c) then begin
+          d.(v) <- d.(u) + Some c;
+          if n - 1 <= i then
             (* n 回目以降に変更が起こった場合，v までの経路に負閉路が含まれている *)
-            if n - 1 <= i then
-              neg.(v) <- true) es
+            neg.(v) <- true
+        end) es
     done;
     fun v ->
       if neg.(v) then `NegInf
-      else match d.(v) with None -> `Inf | Some d -> `Weight d
+      else
+        match d.(v) with
+        | None -> `Inf
+        | Some d -> `Weight d
 
   let bellman_ford es s =
     let (n, comp, _) =
       CC.compress @@
         List.concat @@
           List.map (fun (u, v, _) -> [u; v]) es in
-    let d =
+    match
       raw_bellman_ford n
-        (List.map (fun (u, v, c) -> (comp u, comp v, c)) es) (comp s) in
-    fun v -> try d (comp v) with Not_found -> `Inf
+        (List.map (fun (u, v, c) -> (comp u, comp v, c)) es) (comp s)
+    with
+    | exception Not_found -> (* 頂点から延びる辺がない *)
+        fun _ -> `Inf
+    | d ->
+        fun v -> try d (comp v) with Not_found -> `Inf
 end
 
 (* sample code *)
