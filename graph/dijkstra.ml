@@ -24,29 +24,29 @@ struct
 
   (* ダイクストラ法のメインループ *)
   (* d に入っていない頂点への距離は無限大とみなす *)
-  let rec dijkstra_aux e (q, d) =
+  let rec dijkstra_aux e (d, q) =
     match WMap.min_binding q with
     | exception Not_found -> d
     | (w, vs) ->
         dijkstra_aux e @@ List.fold_right (fun v ->
           (* w = d.(v) *)
-          List.fold_right (fun (u, c) (q, d) ->
+          List.fold_right (fun (u, c) (d, q) ->
             (* c は頂点 v から頂点 u への辺の重み *)
             let open Weight in
             if
               (* d.(u) <= d.(v) + c *)
               try 0 <= compare (w + c) (VMap.find u d)
               with Not_found -> false (* d.(u) は無限大 *)
-            then (q, d)
+            then (d, q)
             else
-              (WMap.add (w + c) (u :: try WMap.find (w + c) q with Not_found -> []) q,
-               VMap.add u (w + c) d)) (e v)) vs (WMap.remove w q, d)
+              VMap.add u (w + c) d,
+              WMap.add (w + c) (u :: try WMap.find (w + c) q with Not_found -> []) q)
+          (e v)) vs (d, WMap.remove w q)
 
   let rec dijkstra e s =
     let d =
       dijkstra_aux e
-        (WMap.singleton Weight.zero [s],
-         VMap.singleton s Weight.zero) in
+        (VMap.singleton s Weight.zero, WMap.singleton Weight.zero [s]) in
     fun v -> try Some (VMap.find v d) with Not_found -> None
 end
 
