@@ -67,7 +67,7 @@ struct
       raw_bellman_ford n
         (List.map (fun (u, v, c) -> (comp u, comp v, c)) es) (comp s)
     with
-    | exception Not_found -> (* 頂点から延びる辺がない *)
+    | exception Not_found -> (* 始点から延びる辺がない *)
         fun _ -> `Inf
     | d ->
         fun v -> try d (comp v) with Not_found -> `Inf
