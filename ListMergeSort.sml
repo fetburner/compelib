@@ -1,10 +1,13 @@
 (* sorting *)
-local
-  fun revMerge' op<= [] ys acc = List.revAppend (ys, acc)
-    | revMerge' op<= xs [] acc = List.revAppend (xs, acc)
-    | revMerge' op<= (x :: xs) (y :: ys) acc =
-        if x <= y then revMerge' op<= xs (y :: ys) (x :: acc)
-        else revMerge' op<= (x :: xs) ys (y :: acc)
+structure ListMergeSort : sig
+  val sort : ('a * 'a -> bool) -> 'a list -> 'a list
+end = struct
+  fun revMerge op<= [] ys acc = List.revAppend (ys, acc)
+    | revMerge op<= xs [] acc = List.revAppend (xs, acc)
+    | revMerge op<= (x :: xs) (y :: ys) acc =
+        if x <= y
+        then revMerge op<= xs (y :: ys) (x :: acc)
+        else revMerge op<= (x :: xs) ys (y :: acc)
 
   fun sort' op<= op> 2 (x :: y :: _) =
         if x <= y then [x, y] else [y, x]
@@ -18,17 +21,16 @@ local
           else if y <= z then [y, z, x]
           else [z, y, x]
     | sort' op<= op> n xs =
-        revMerge' op>
+        revMerge op>
           (sort' op> op<= (n div 2) xs)
           (sort' op> op<= ((n + 1) div 2) (List.drop (xs, n div 2))) []
-in
-  fun revMerge cmp xs ys =
-    revMerge' (fn (x, y) => cmp (x, y) <> GREATER) xs ys []
 
-  fun sort cmp [] = []
-    | sort cmp [x] = [x]
-    | sort cmp (xs as _ :: _ :: _) =
-        sort'
-          (fn (x, y) => cmp (x, y) <> GREATER)
-          (fn (x, y) => cmp (x, y) = GREATER) (length xs) xs
-end
+  fun sort op> [] = []
+    | sort op> [x] = [x]
+    | sort op> (xs as _ :: _ :: _) = sort' (not o op>) op> (length xs) xs
+
+end;
+
+(* sample code *)
+ListMergeSort.sort op> [3, 1, 4, 1, 5];
+ListMergeSort.sort (fn ((x, _), (y, _)) => x > y) [(1, 1), (2, 2), (1, 3), (2, 4), (1, 5)];
