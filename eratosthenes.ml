@@ -12,7 +12,7 @@ let sieve :
      *)
     let m = n / 2 - 1 in
     let a = Array.make m true in
-    for i = 0 to (int_of_float (ceil @@ sqrt @@ float_of_int n) - 3) / 2 do
+    for i = 0 to (int_of_float (sqrt @@ float_of_int n) - 3) / 2 do
       if a.(i) then begin
         let p = 2 * i + 3 in
         let rec loop i =
