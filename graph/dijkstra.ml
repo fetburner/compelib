@@ -38,7 +38,7 @@ struct
             if
               (* d.(v) <= d.(u) + c *)
               try Weight.compare (VMap.find v d) (w + c) <= 0
-              with Not_found -> false (* d.(u) は無限大 *)
+              with Not_found -> false (* d.(v) は無限大 *)
             then (d, q)
             else
               VMap.add v (w + c) d,
