@@ -34,6 +34,7 @@ module Make (E : Set.OrderedType) : S with type elt = E.t = struct
   let cardinal m = EltMap.fold (fun _ -> ( + )) m 0
   let fold f = EltMap.fold (fun x n -> Array.fold_right f (Array.make n x))
   let max_elt m = fst (EltMap.max_binding m)
+  let min_elt m = fst (EltMap.min_binding m)
   let subset m1 m2 = EltMap.for_all (fun x n1 -> n1 <= count x m2) m1
   let inter m1 m2 = EltMap.merge (fun _ o1 o2 ->
     match o1, o2 with
