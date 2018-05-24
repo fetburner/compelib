@@ -1,103 +1,179 @@
-Require Import Arith Omega Recdef.
+Require Import Bool Arith Omega Program.
 
-Section LowerBound.
-  Variable P : nat -> Prop.
-  Variable threshold : nat.
-  Hypothesis P_dec : forall n, { P n } + { ~P n }.
-  Hypothesis P_monotone1 : forall n, threshold <= n -> P n.
-  Hypothesis P_monotone2 : forall n, P n -> threshold <= n.
+Program Fixpoint upper_bound' l r
+  (p : forall n, l <= n < r -> bool)
+  (Hacc : @Acc _ (ltof _ (fun p => snd p - fst p)) (l, r))
+  (_ : exists m,
+    l <= m < r /\
+    (forall n H, p n H = true -> n <= m) /\
+    (forall n H, n <= m -> p n H = true)) :
+  { m | l <= m < r /\
+    (forall n H, p n H = true -> n <= m) /\
+    (forall n H, n <= m -> p n H = true) } :=
+  match Hacc with
+  | Acc_intro _ Hacc' =>
+      if le_gt_dec r (S l)
+      then exist _ l _
+      else
+        let m := (l + r) / 2 in
+        ( if p m _ as b return p m _ = b -> _
+          then fun _ =>
+            let (n, _) := upper_bound' m r (fun n _ => p n _) (Hacc' _ _) _ in
+            exist _ n _
+          else fun _ =>
+            let (n, _) := upper_bound' l m (fun n _ => p n _) (Hacc' _ _) _ in
+            exist _ n _ ) eq_refl
+  end.
+Next Obligation.
+  repeat split; intros; try omega.
+  eapply H3. omega.
+Qed.
+Next Obligation.
+  split.
+  - apply (Nat.div_le_lower_bound _ 2); omega.
+  - apply (Nat.div_lt_upper_bound _ 2); omega.
+Qed.
+Next Obligation.
+  assert ((l + r) / 2 < r).
+  { apply Nat.div_lt_upper_bound; omega. }
+  unfold ltof. simpl in *. omega.
+Qed.
+Next Obligation.
+  assert ((l + r) / 2 < r).
+  { apply Nat.div_lt_upper_bound; omega. }
+  simpl in *. omega.
+Qed.
+Next Obligation.
+  replace n with H; eauto.
+  assert (n <= H) by eapply l0, H4, le_n.
+  assert (H <= n) by eapply H3, e, le_n.
+  omega.
+  Unshelve.
+  - eauto.
+  - destruct (le_gt_dec ((l + r) / 2) H) as [ Hle | ]; simpl in *; try omega.
+    generalize H1. erewrite (e _ _ Hle). inversion 1.
+Qed.
+Next Obligation.
+  exists H. repeat split; eauto.
+  destruct (le_gt_dec ((l + r) / 2) H) as [ Hle | ]; simpl in *; try omega.
+  generalize H1. erewrite (e _ _ Hle). inversion 1.
+Qed.
+Next Obligation.
+  assert (l < (l + r) / 2).
+  { apply Nat.div_le_lower_bound; omega. }
+  unfold ltof. simpl in *. omega.
+Qed.
+Next Obligation.
+  assert (l < (l + r) / 2).
+  { apply Nat.div_le_lower_bound; omega. }
+  unfold ltof. simpl in *. omega.
+Qed.
+Next Obligation.
+  replace n with H; eauto.
+  assert (H <= n) by eapply H3, e, le_n.
+  assert (n <= H) by eapply l0, H4, le_n.
+  omega.
+  Unshelve.
+  - eauto.
+  - generalize (l0 _ _ H1). omega.
+Qed.
+Next Obligation.
+  exists H. repeat split; eauto.
+Qed.
 
-  Function lower_bound_aux offset n { wf lt n } :=
-    match n with
-    | O => offset
-    | _ =>
-      let m := Nat.div2 n in
-      if P_dec (offset + m) then lower_bound_aux offset m
-      else lower_bound_aux (S m + offset) (n - S m)
-    end.
-  Proof.
-    - intros. apply Nat.lt_div2. omega.
-    - intros. omega.
-    - apply lt_wf.
-  Defined.
+Definition upper_bound l r p :=
+  upper_bound' l r p (well_founded_ltof _ _ _).
 
-  Lemma lower_bound_aux_spec n : forall offset error,
-    threshold = offset + error ->
-    error <= n ->
-    lower_bound_aux offset n = offset + error.
-  Proof.
-    induction n as [[| n'] IHn] using lt_wf_ind;
-      intros offset error ? ?;
-      subst;
-      rewrite lower_bound_aux_equation.
-    - omega.
-    - destruct (P_dec (offset + Nat.div2 (S n'))) as [ HP | ].
-      + apply IHn; eauto.
-        * apply Nat.lt_div2.
-          omega.
-        * specialize (P_monotone2 _ HP).
-          omega.
-      + destruct (le_dec (offset + error) (offset + Nat.div2 (S n'))) as [ Hle | ].
-        * apply P_monotone1 in Hle.
-          congruence.
-        * rewrite IHn with (error0 := error - S (Nat.div2 (S n'))); try omega.
-  Qed.
+Program Fixpoint lower_bound' l r
+  (p : forall n, l < n <= r -> bool)
+  (Hacc : @Acc _ (ltof _ (fun p => snd p - fst p)) (l, r))
+  (_ : exists m,
+    l < m <= r /\
+    (forall n H, p n H = true -> m <= n) /\
+    (forall n H, m <= n -> p n H = true)) :
+  { m | l < m <= r /\
+    (forall n H, p n H = true -> m <= n) /\
+    (forall n H, m <= n -> p n H = true) } :=
+  match Hacc with
+  | Acc_intro _ Hacc' =>
+      if le_gt_dec r (S l)
+      then exist _ r _
+      else
+        let m := (l + r) / 2 in
+        ( if p m _ as b return p m _ = b -> _
+          then fun _ =>
+            let (n, _) := lower_bound' l m (fun n _ => p n _) (Hacc' _ _) _ in
+            exist _ n _
+          else fun _ =>
+            let (n, _) := lower_bound' m r (fun n _ => p n _) (Hacc' _ _) _ in
+            exist _ n _ ) eq_refl
+  end.
+Next Obligation.
+  repeat split; intros; try omega.
+  eapply H3. omega.
+Qed.
+Next Obligation.
+  split.
+  - apply (Nat.div_le_lower_bound _ 2); omega.
+  - apply (Nat.div_le_upper_bound _ 2); omega.
+Qed.
+Next Obligation.
+  assert (l < (l + r) / 2).
+  { apply Nat.div_le_lower_bound; omega. }
+  unfold ltof. simpl in *. omega.
+Qed.
+Next Obligation.
+  assert (l < (l + r) / 2).
+  { apply Nat.div_le_lower_bound; omega. }
+  simpl in *. omega.
+Qed.
+Next Obligation.
+  replace n with H; eauto.
+  assert (n <= H) by eapply H3, e, le_n.
+  assert (H <= n) by eapply l0, H4, le_n.
+  omega.
+  Unshelve.
+  - destruct (le_gt_dec H ((l + r) / 2)) as [ Hle | ]; simpl in *; try omega.
+    generalize H1. erewrite (e _ _ Hle). inversion 1.
+  - eauto.
+Qed.
+Next Obligation.
+  exists H. repeat split; eauto.
+  destruct (le_gt_dec H ((l + r) / 2)) as [ Hle | ]; simpl in *; try omega.
+  generalize H1. erewrite (e _ _ Hle). inversion 1.
+Qed.
+Next Obligation.
+  assert ((l + r) / 2 < r).
+  { apply Nat.div_lt_upper_bound; omega. }
+  unfold ltof. simpl in *. omega.
+Qed.
+Next Obligation.
+  assert ((l + r) / 2 < r).
+  { apply Nat.div_lt_upper_bound; omega. }
+  unfold ltof. simpl in *. omega.
+Qed.
+Next Obligation.
+  replace n with H; eauto.
+  assert (H <= n) by eapply l0, H4, le_n.
+  assert (n <= H) by eapply H3, e, le_n.
+  omega.
+  Unshelve.
+  - eauto.
+  - generalize (l0 _ _ H1). omega.
+Qed.
+Next Obligation.
+  exists H. repeat split; eauto.
+Qed.
 
-  Definition lower_bound alpha beta :=
-    lower_bound_aux alpha (beta - alpha).
+Definition lower_bound l r p :=
+  lower_bound' l r p (well_founded_ltof _ _ _).
 
-  Theorem lower_bound_spec alpha beta :
-    alpha <= threshold <= beta ->
-    lower_bound alpha beta = threshold.
-  Proof.
-    unfold lower_bound.
-    intros ?.
-    rewrite lower_bound_aux_spec with (error := threshold - alpha); try omega.
-  Qed.
-End LowerBound.
-
-Section UpperBound.
-  Variable P : nat -> Prop.
-  Variable threshold : nat.
-  Hypothesis P_dec : forall n, { P n } + { ~P n }.
-  Hypothesis P_monotone1 : forall n, n <= threshold -> P n.
-  Hypothesis P_monotone2 : forall n, P n -> n <= threshold.
-  
-  Program Definition upper_bound := lower_bound (fun n => ~P (S n)) _.
-  Next Obligation.
-    destruct (P_dec (S n)); eauto.
-  Qed.
-
-  Lemma upper_bound_spec alpha beta :
-    alpha <= threshold <= beta ->
-    upper_bound alpha beta = threshold.
-  Proof.
-    unfold upper_bound.
-    intros ?.
-    rewrite lower_bound_spec with (threshold := threshold); try omega.
-    - intros n ?.
-      destruct (P_dec (S n)) as [ HP | ].
-      + specialize (P_monotone2 _ HP).
-        omega.
-      + eauto.
-    - intros n Hp.
-      destruct (le_dec (S n) threshold) as [ Hle | ].
-      + exfalso.
-        eauto.
-      + omega.
-  Qed.
-End UpperBound.
-
-(* sqrt 4 *)
-Eval compute in
-  (lower_bound
-     (fun n => 4 <= n * n)
-     (fun n => match le_dec 4 (n * n) with left H => left H | right H => right H end) 0 10).
-
+Extract Inductive bool => "bool" ["true" "false"].
 Extract Inductive sumbool => "bool" ["true" "false"].
 Extract Inductive nat => int ["0" "succ"] "(fun fO fS n -> if n = 0 then fO () else fS (n-1))".
 
 Extract Constant plus => "( + )".
 Extract Constant minus => "( - )".
-Extract Constant Nat.div2 => "(fun x -> x / 2)".
+Extract Constant Nat.div => "( / )".
+Extract Constant le_gt_dec => "( <= )".
 Extraction "bsearch.ml" lower_bound upper_bound.
