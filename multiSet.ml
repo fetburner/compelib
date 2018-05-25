@@ -14,10 +14,10 @@ module type S =
     val empty : t
     (* 要素数 *)
     val cardinal : t -> int
-    (* 要素の追加 *)
-    val add : elt -> t -> t
-    (* 要素の削除 要素が存在しなければ無視 *)
-    val remove : elt -> t -> t
+    (* 要素xをn個追加 *)
+    val add : elt -> int -> t -> t
+    (* 要素xをn個削除 要素がn個以上存在しない場合は全て削除 *)
+    val remove : elt -> int -> t -> t
     (* 要素xの数を数える *)
     val count : elt -> t -> int
     (* xより小さい要素の数を数える *)
@@ -94,16 +94,16 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
             end
       end else create l x d r
 
-    let rec add x = function
+    let rec add x n = function
       | Empty -> create Empty x 1 Empty
       | Node { left; data = y; count; right } ->
           match Ord.compare x y with
           | 0 ->
-              create left x (count + 1) right
+              create left x (count + n) right
           | c when c < 0 ->
-              balance (add x left) y count right
+              balance (add x n left) y count right
           | _ ->
-              balance left y count (add x right)
+              balance left y count (add x n right)
 
     (* 最小の要素とその数を返す *)
     let rec count_min_elt = function
@@ -125,19 +125,19 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
           let (x, c) = count_min_elt t2 in
           balance t1 x c (clear_min_elt t2)
 
-    let rec remove x = function
+    let rec remove x n = function
       | Empty -> Empty
       | Node { left; data = y; count; right } ->
           match Ord.compare x y with
           | 0 ->
-              if count = 1 then
+              if count <= n then
                 merge left right
               else
-                create left y (count - 1) right
+                create left y (count - n) right
           | c when c < 0 ->
-              balance (remove x left) y count right
+              balance (remove x n left) y count right
           | _ ->
-              balance left y count (remove x right)
+              balance left y count (remove x n right)
 
     let rec count x = function
       | Empty -> 0
