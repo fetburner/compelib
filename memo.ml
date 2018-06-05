@@ -50,3 +50,22 @@ Array.init 5 (fun i -> Array.init 5 (fun j -> routes' (i, j)));;
   [|1; 4; 10; 20; 35|]; [|1; 5; 15; 35; 70|]|] *)
 routes' (29, 29);;
 (* - : int = 30067266499541040 *)
+
+(* continuation passing style *)
+let memoize n f =
+  let dp = Hashtbl.create n in
+  let rec get x k =
+    try k @@ Hashtbl.find dp x with
+    | Not_found ->
+        f get x @@ fun y ->
+          Hashtbl.add dp x y; k y in get
+
+(* sample code *)
+let ( +^ ) x y = (x + y) mod 1000000007
+
+let fib = memoize 1000000 @@ fun fib n k ->
+  if n <= 1 then k 1
+  else fib (n - 1) @@ fun x -> fib (n - 2) @@ fun y -> k @@ x +^ y;;
+
+(* stack overflow does not occur *)
+Array.init 1000000 @@ fun x -> fib x @@ fun y -> y;;
