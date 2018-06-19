@@ -7,6 +7,19 @@ let rec gcd n m =
   if m = 0 then n
   else gcd m (n mod m)
 
+let rec comb n = function
+  | 0 -> 1
+  | r -> comb (n - 1) (r - 1) * n / r
+let comb n r =
+  if 2 * r <= n then comb n r
+  else comb n (n - r)
+
+let rec take n = function
+  | [] -> []
+  | x :: xs ->
+      if n = 0 then []
+      else x :: take (n - 1) xs
+
 let rec fold_tournament dir f = function
   | [x] -> x
   | x :: xs ->
