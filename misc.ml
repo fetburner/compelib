@@ -7,6 +7,8 @@ let rec gcd n m =
   if m = 0 then n
   else gcd m (n mod m)
 
+let lcm n m = n / gcd n m * m
+
 let rec comb n = function
   | 0 -> 1
   | r -> comb (n - 1) (r - 1) * n / r
