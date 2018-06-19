@@ -28,6 +28,18 @@ module type S =
     val nth_inc : int -> t -> elt
     (* 降順に見た時のn番目の要素 範囲外ならNot_foundを投げる *)
     val nth_dec : int -> t -> elt
+    (* 昇順に見てn要素を取り出す n要素に満たなければ全ての要素を昇順に列挙する *)
+    val take_inc : int -> t -> elt list
+    (* 降順に見てn要素を取り出す n要素に満たなければ全ての要素を降順に列挙する *)
+    val take_dec : int -> t -> elt list
+    (* 全ての要素を昇順に列挙する *)
+    val elements_inc : t -> elt list
+    (* 全ての要素を降順に列挙する *)
+    val elements_dec : t -> elt list
+    (* 昇順に要素を畳み込む *)
+    val fold_inc : ('a -> elt -> 'a) -> 'a -> t -> 'a
+    (* 降順に要素を畳み込む *)
+    val fold_dec : (elt -> 'a -> 'a) -> t -> 'a -> 'a
     (* 最小の要素 空集合が与えられた場合はNot_foundを投げる *)
     val min_elt : t -> elt
     (* 最大の要素 空集合が与えられた場合はNot_foundを投げる *)
@@ -190,6 +202,68 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
             data
           else
             nth_dec (n - cardinal right - count) left
+
+    let rec elements_inc acc = function
+      | Empty -> acc
+      | Node { left; data; count; right } ->
+          elements_inc
+            (Array.fold_left (fun acc x -> x :: acc)
+              (elements_inc acc right)
+              (Array.make count data)) left
+
+    let rec elements_dec acc = function
+      | Empty -> acc
+      | Node { left; data; count; right } ->
+          elements_dec
+            (Array.fold_left (fun acc x -> x :: acc)
+              (elements_dec acc left)
+              (Array.make count data)) right
+
+    let rec take_inc n = function
+      | Empty -> []
+      | Node { left; data; count; right } ->
+          if n < cardinal left then
+            take_inc n left
+          else if n < cardinal left + count then
+            elements_inc (Array.to_list (Array.make (n - cardinal left) data)) left
+          else
+            elements_inc
+              (Array.fold_left (fun acc x -> x :: acc)
+                (take_inc (n - cardinal left - count) right)
+                (Array.make count data)) left
+
+    let rec take_dec n = function
+      | Empty -> []
+      | Node { left; data; count; right } ->
+          if n < cardinal right then
+            take_dec n right
+          else if n < cardinal right + count then
+            elements_dec (Array.to_list (Array.make (n - cardinal right) data)) right
+          else
+            elements_dec
+              (Array.fold_left (fun acc x -> x :: acc)
+                (take_dec (n - cardinal right - count) left)
+                (Array.make count data)) right
+
+    let elements_inc = elements_inc []
+    let elements_dec = elements_dec []
+
+    let rec fold_inc f acc = function
+      | Empty -> acc
+      | Node { left; data; count; right } ->
+          fold_inc f
+            (Array.fold_left f
+              (fold_inc f acc left)
+              (Array.make count data)) right
+
+    let rec fold_dec f acc = function
+      | Empty -> acc
+      | Node { left; data; count; right } ->
+          fold_dec f
+            (Array.fold_right f
+              (Array.make count data)
+              (fold_dec f acc right)) left
+    let fold_dec f t acc = fold_dec f acc t
 
     let rec min_elt t = fst (count_min_elt t)
 
