@@ -56,7 +56,7 @@ struct
     (* 各辺に流せる流量 *)
     let capacity = Array.make (2 * List.length es) Flow.zero in
     (* 逆辺を張りつつ，隣接リスト形式に変換 *)
-    let adj = Hashtbl.create (2 * List.length es) in
+    let adj = Hashtbl.create n in
     List.iteri (fun i (u, v, c) ->
       (* 各辺は番号で管理する *)
       Hashtbl.add adj u (v, 2 * i);
