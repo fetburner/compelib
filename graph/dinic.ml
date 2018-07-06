@@ -19,7 +19,9 @@ sig
     (* 終点 *)
     'v ->
     (* 最大フロー *)
-    Flow.t
+    Flow.t *
+    (* 最大フローを流した際の各辺の流量 *)
+    ('v * 'v * Flow.t) list
 end =
 struct
   module G = DirectedGraph (struct
@@ -86,7 +88,8 @@ struct
           if Flow.compare f Flow.zero <= 0 then flow
           else inner (Flow.( + ) flow f) in
         loop @@ inner flow in
-    loop Flow.zero
+    let f = loop Flow.zero in
+    (f, List.mapi (fun i (u, v, _) -> (u, v, capacity.(2 * i + 1))) es)
 end
 
 (* 蟻本p. 188のグラフで試す *)
@@ -97,8 +100,8 @@ module G = FlowNetwork (struct
   let ( + ) = ( + )
   let ( - ) = ( - )
   let compare = compare
-end)
+end);;
 
-let 11 = G.max_flow 5
+G.max_flow 5
   [ (0, 1, 10); (0, 2, 2); (1, 2, 6); (1, 3, 6);
-    (3, 2, 3); (3, 4, 8); (2, 4, 5) ] 0 4
+    (3, 2, 3); (3, 4, 8); (2, 4, 5) ] 0 4;;
