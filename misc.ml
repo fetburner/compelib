@@ -22,6 +22,16 @@ let rec take n = function
       if n = 0 then []
       else x :: take (n - 1) xs
 
+let rec floor_sqrt acc acc_x_2_x_r sq_acc r sq_r z =
+  if r = 0 then acc
+  else
+    let sq_acc' = sq_acc + acc_x_2_x_r + sq_r in
+    ( if sq_acc' <= z then
+        floor_sqrt (acc + r) ((acc_x_2_x_r lsr 1) + sq_r) sq_acc'
+      else
+        floor_sqrt acc (acc_x_2_x_r lsr 1) sq_acc) (r lsr 1) (sq_r lsr 2) z
+let floor_sqrt = floor_sqrt 0 0 0 (1 lsl 30) (1 lsl 60)
+
 let rec fold_tournament dir f = function
   | [x] -> x
   | x :: xs ->
