@@ -4,7 +4,7 @@ let rec power ( * ) one m = function
   | n when n mod 2 = 0 ->
       power ( * ) one (m * m) (n / 2)
   | n ->
-      m * power ( * ) one m (n - 1)
+      power ( * ) (m * one) m (n - 1)
 
 (* test *)
 (let n = 1000000000 in
