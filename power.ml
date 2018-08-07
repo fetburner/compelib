@@ -1,10 +1,7 @@
 (* compute exponentiation *)
-let rec power ( * ) one m = function
-  | 0 -> one
-  | n when n mod 2 = 0 ->
-      power ( * ) one (m * m) (n / 2)
-  | n ->
-      power ( * ) (m * one) m (n - 1)
+let rec power ( * ) e m n =
+  if n <= 0 then e
+  else power ( * ) (if n land 1 = 0 then e else m * e) (m * m) (n lsr 1)
 
 (* test *)
 (let n = 1000000000 in
