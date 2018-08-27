@@ -25,6 +25,7 @@ end = struct
         else (n + 1, CoordMap.add c n comp, IntMap.add n c decomp))
       (0, CoordMap.empty, IntMap.empty) cs in
     (n, (fun c -> CoordMap.find c comp), (fun n -> IntMap.find n decomp))
+  let compress cs = compress @@ List.sort Coord.compare cs
 end
 
 (* sample code *)
@@ -34,7 +35,7 @@ module CC = CoordComp (struct
   let compare = compare
 end)
 
-let l = [100; 200; 300; 400]
+let l = [3; 1; 4; 1]
 let n, f, g = CC.compress l;;
 List.map f l;;
 Array.init n g;;
