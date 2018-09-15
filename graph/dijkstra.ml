@@ -41,7 +41,7 @@ struct
             (* 現時点で終点までの距離が分かっているか *)
             match ans with
             | None -> false
-            | Some x -> Weight.compare (VMap.find t !d) w <= 0
+            | Some x -> Weight.compare x w <= 0
           (* 既に終点までの距離が分かっているので返す *)
           then ans
           else begin
