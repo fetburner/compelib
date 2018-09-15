@@ -30,16 +30,20 @@ struct
     let q = ref @@ WMap.singleton Weight.zero [s] in
     (* ダイクストラ法のメインループ *)
     let rec dijkstra_aux t =
+      let ans =
+        (* AtCoderのOCaml処理系は4.02.3なので，find_optが使えない *)
+        try Some (VMap.find t !d)
+        with Not_found -> None in
       match WMap.min_binding !q with
-      | exception Not_found ->
-          (try Some (VMap.find t !d) with Not_found -> None)
+      | exception Not_found -> ans
       | (w, us) ->
           if
             (* 現時点で終点までの距離が分かっているか *)
-            try Weight.compare (VMap.find t !d) w <= 0
-            with Not_found -> false
+            match ans with
+            | None -> false
+            | Some x -> Weight.compare (VMap.find t !d) w <= 0
           (* 既に終点までの距離が分かっているので返す *)
-          then Some (VMap.find t !d)
+          then ans
           else begin
             (* 終点までの距離が分かっていないので，ダイクストラ法を続行 *)
             q := WMap.remove w !q;
