@@ -70,8 +70,8 @@ let factorize n =
       (p, n) :: acc
 
 let rec divisors (acc, acc') i n =
-  if n < i * i
-  then List.rev_append acc acc'
-  else if n = i * i then List.rev_append acc (i :: acc')
-  else divisors (if 0 < n mod i then (acc, acc') else (i :: acc, n / i :: acc')) (i + 1) n
+  match compare n (i * i) with
+  | -1 -> List.rev_append acc acc'
+  | 0  -> List.rev_append acc (i :: acc')
+  | 1  -> divisors (if 0 < n mod i then (acc, acc') else (i :: acc, n / i :: acc')) (i + 1) n
 let divisors = divisors ([], []) 1
