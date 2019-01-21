@@ -1,86 +1,69 @@
-module type Monoid = sig
+module type SemiGroup = sig
   type t
-  val e : t
   val op : t -> t -> t
 end
 
-module Make (S : Monoid) : sig
+module Make (S : SemiGroup) : sig
   type t
   type elt
-  (* n要素の単位元からなるセグ木を作る *)
-  val make : int -> t
-  (* 
+
+  (* f 0, ... f (n - 1)のn要素からなるセグ木を作る *)
+  val init : int -> (int -> elt) -> t
+  (*
    * update i f t
-   * i番目の要素にfを適用したセグ木を作る
+   * i番目の要素x_iをf x_iに変更したセグ木を作る
    *)
   val update : int -> (elt -> elt) -> t -> t
   (*
-   * update_range l r f t
-   * [l, r)の要素に自己準同型写像fを適用したセグ木を作る
-   *)
-  val update_range : int -> int -> (elt -> elt) -> t -> t
-  (*
    * query l r t
-   * [l, r)の要素の積を求める
+   * 添字が[l, r)の要素を半群の演算子で畳み込んだ値を求める
    *)
   val query : int -> int -> t -> elt
 end with type elt = S.t = struct
   type elt = S.t
-  (* sizeがセグ木の要素数，dataは要素すべてをモノイドの演算で畳み込んだもの *)
-  type t = { size : int; data : elt; body : body lazy_t }
-  and body = Leaf | Node of t * t
 
-  let make_node left right =
-    { size = left.size + right.size;
-      data = S.op left.data right.data;
-      body = lazy (Node (left, right)) }
+  type body =
+    | Leaf of elt
+    | Node of elt * body * body
+  type t = { size : int; body : body }
 
-  let rec make n = 
+  (* セグ木の要素をどのように左右に分配するか
+     正整数nについて lsize n + rsize n = n が成り立たなくてはならない *)
+  let lsize n = n lsr 1
+  let rsize n = (n + 1) lsr 1
+
+  (* セグ木の保持する要素を半群の演算子で畳み込んだもの *)
+  let data = function
+    | Leaf x
+    | Node (x, _, _) -> x
+
+  let mknode l r = Node (S.op (data l) (data r), l, r)
+
+  let rec init i f = function
+    | 1 -> Leaf (f i)
+    | n -> mknode (init i f (lsize n)) (init (i + lsize n) f (rsize n))
+  let init n f =
     assert (1 <= n);
-    { size = n;
-      data = S.e;
-      body = lazy
-        begin match n with
-        | 1 -> Leaf
-        | n -> Node (make (n / 2), make ((n + 1) / 2))
-        end }
+    { size = n; body = init 0 f n }
 
-  let rec update i f t =
+  let rec update n i f = function
+    | Leaf x -> Leaf (f x)
+    | Node (_, l, r) ->
+        if i < lsize n
+        then mknode (update (lsize n) i f l) r
+        else mknode l (update (rsize n) (i - lsize n) f r)
+  let update i f t =
     assert (0 <= i && i < t.size);
-    match t with
-    | { body = lazy Leaf } -> { t with data = f t.data }
-    | { body = lazy (Node (left, right)) } ->
-        if i < left.size then make_node (update i f left) right
-        else make_node left (update (i - left.size) f right)
+    { t with body = update t.size i f t.body }
 
-  let rec update_range l r f t =
+  let rec query n l r = function
+    | Leaf x -> x
+    | Node (x, left, right) ->
+        if l = 0 && r = n then x
+        else if r <= lsize n then query (lsize n) l r left
+        else if lsize n <= l then query (rsize n) (l - lsize n) (r - lsize n) right
+        else S.op (query (lsize n) l (lsize n) left) (query (rsize n) 0 (r - lsize n) right)
+  let query l r t =
     assert (0 <= l && l < r && r <= t.size);
-    match t with
-    | { body = lazy Leaf } -> { t with data = f t.data }
-    | { body = lazy (Node (left, right)) } ->
-        if l <= 0 && t.size <= r then
-          { t with
-            data = f t.data;
-            body = lazy
-              (Node
-                (update_range 0 left.size f left,
-                 update_range 0 right.size f right)) }
-        else if r <= left.size then
-          make_node (update_range l r f left) right
-        else if left.size <= l then
-          make_node left (update_range (l - left.size) (r - left.size) f right)
-        else
-          make_node
-            (update_range l left.size f left)
-            (update_range 0 (r - left.size) f right)
-
-  let rec query l r t =
-    assert (0 <= l && l < r && r <= t.size);
-    match t with
-    | { body = lazy Leaf } -> t.data
-    | { body = lazy (Node (left, right)) } ->
-        if l <= 0 && t.size <= r then t.data
-        else if r <= left.size then query l r left
-        else if left.size <= l then query (l - left.size) (r - left.size) right
-        else S.op (query l left.size left) (query 0 (r - left.size) right)
+    query t.size l r t.body
 end
