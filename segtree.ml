@@ -7,6 +7,8 @@ module Make (S : SemiGroup) : sig
   type t
   type elt
 
+  (* 与えられたリストの要素からなるセグ木を作る *)
+  val of_list : elt list -> t
   (* f 0, ... f (n - 1)のn要素からなるセグ木を作る *)
   val init : int -> (int -> elt) -> t
   (*
@@ -38,6 +40,17 @@ end with type elt = S.t = struct
     | Node (x, _, _) -> x
 
   let mknode l r = Node (S.op (data l) (data r), l, r)
+
+  let rec of_list l = function
+    | 1 -> Leaf (List.hd l), List.tl l
+    | n ->
+        let t1, l = of_list l (lsize n) in
+        let t2, l = of_list l (rsize n) in
+        mknode t1 t2, l
+  let of_list l =
+    let n = List.length l in
+    assert (0 < n);
+    { size = n; body = fst (of_list l n) }
 
   let rec init i f = function
     | 1 -> Leaf (f i)
