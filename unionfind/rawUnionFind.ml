@@ -1,10 +1,9 @@
 (* 配列版素集合データ構造 *)
-module RawUnionFind : sig
+module UnionFind : sig
   type t
 
   module Class : sig
     type t
-    val to_int : t -> int
     val compare : t -> t -> int
   end
 
@@ -13,38 +12,34 @@ module RawUnionFind : sig
   (* 要素がどの集合に属するか調べる *)
   (* 要素は0からn-1の整数である必要がある *)
   val find : t -> int -> Class.t
-  (* 与えられた要素が属する集合同士を合併する *)
-  val unite : t -> int -> int -> unit
+  (* 与えられた集合同士を合併する *)
+  (* 破壊的操作であるため注意 *)
+  val unite : t -> Class.t -> Class.t -> unit
+  (* 与えられた集合に属する要素の数を求める *)
+  val cardinal : t -> Class.t -> int
 end = struct
-  type t = { rank : int array; parent : int array }
+  type t = int array
 
   module Class = struct
     type t = int
-    let to_int c = c
     let compare = compare
   end
 
-  let make n =
-    { rank = Array.make n 0;
-      parent = Array.init n @@ fun c -> c }
+  let make n = Array.make n (-1)
 
   let rec find uf x =
-    if x = uf.parent.(x) then x
+    if uf.(x) < 0 then x
     else begin
-      let y = find uf uf.parent.(x) in
-      uf.parent.(x) <- y; y
+      let y = find uf uf.(x) in
+      uf.(x) <- y; y
     end
 
-  let unite uf i j =
-    let x = find uf i in
-    let y = find uf j in
+  let unite uf x y =
     if x <> y then begin
-      if uf.rank.(x) < uf.rank.(y) then uf.parent.(x) <- y
-      else begin
-        uf.parent.(y) <- x;
-        if uf.rank.(x) = uf.rank.(y) then
-          uf.rank.(x) <- 1 + uf.rank.(x)
-      end
+      let x, y = if uf.(x) <= uf.(y) then x, y else y, x in
+      uf.(x) <- uf.(x) + uf.(y);
+      uf.(y) <- x
     end
-end
 
+  let cardinal uf x = ~- (uf.(x))
+end
