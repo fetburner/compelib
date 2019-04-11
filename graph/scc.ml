@@ -31,17 +31,14 @@ struct
     else (vs, l)
 
   let sort vs es =
-    snd (List.fold_right (visit es) vs (VSet.of_list vs, []))
+    snd @@ List.fold_right (visit es) vs (VSet.of_list vs, [])
 
   let scc vs es =
-    sort vs es
-    |> List.rev
-    |> List.fold_left (fun (vs, l) v ->
-        if VSet.mem v vs then 
-          let (vs', cs) = visit es v (vs, []) in
-          (vs', cs :: l)
-        else (vs, l)) (VSet.of_list vs, [])
-    |> snd
+    snd @@ List.fold_right (fun v (vs, l) ->
+      if VSet.mem v vs then
+        let (vs', cs) = visit es v (vs, []) in
+        (vs', cs :: l)
+      else (vs, l)) (sort vs es) (VSet.of_list vs, [])
 end
 
 (* sample code *)
