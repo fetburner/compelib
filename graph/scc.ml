@@ -1,28 +1,22 @@
-module DirectedGraph
-  (Vertex : sig
-    type t
-    val compare : t -> t -> int
-  end) :
+module DirectedGraph (VSet : Set.S) :
 sig
   (* トポロジカルソート *)
   val sort :
     (* 頂点のリスト *)
-    Vertex.t list ->
+    VSet.elt list ->
     (* 隣接リスト *)
-    (Vertex.t -> Vertex.t list) ->
-    Vertex.t list
+    (VSet.elt -> VSet.elt list) ->
+    VSet.elt list
 
   (* 強連結成分分解 *)
   val scc :
     (* 頂点のリスト *)
-    Vertex.t list ->
+    VSet.elt list ->
     (* 隣接リスト *)
-    (Vertex.t -> Vertex.t list) ->
-    Vertex.t list list
+    (VSet.elt -> VSet.elt list) ->
+    VSet.elt list list
 end =
 struct
-  module VSet = Set.Make (Vertex)
-
   let rec visit es v (vs, l) =
     if VSet.mem v vs then
       let (vs', l') =
@@ -49,7 +43,7 @@ module Int = struct
 end
 
 module IntSet = Set.Make (Int)
-module IntG = DirectedGraph (Int);;
+module IntG = DirectedGraph (IntSet);;
 
 IntG.scc [1; 2; 3; 4; 5; 6; 7] (function
   | 1 -> [2]
