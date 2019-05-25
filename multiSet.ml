@@ -107,7 +107,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
       end else create l x d r
 
     let rec add x n = function
-      | Empty -> create Empty x 1 Empty
+      | Empty -> create Empty x n Empty
       | Node { left; data = y; count; right } ->
           match Ord.compare x y with
           | 0 ->
