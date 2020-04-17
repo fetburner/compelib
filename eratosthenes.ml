@@ -31,14 +31,13 @@ let sieve :
 (* sample code *)
 
 let p = sieve 100;;
-Array.init 100 (fun i -> i)
-  |> Array.to_list
+List.init 100 (fun i -> i)
   |> List.filter p;;
 let p = sieve 3;;
-Array.init 3 p;;
+List.init 3 p;;
 let p = sieve 4;;
-Array.init 4 p;;
+List.init 4 p;;
 let p = sieve 5;;
-Array.init 5 p;;
+List.init 5 p;;
 let p = sieve 6;;
-Array.init 6 p;;
+List.init 6 p;;

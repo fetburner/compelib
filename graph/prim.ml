@@ -41,7 +41,8 @@ struct
             (* vから伸びる辺をキューに追加 *)
             List.fold_left (fun q (u, w) ->
               (* 現時点で既に訪れている頂点への辺は追加しない *)
-              if VSet.mem u vs then q
+              if VSet.mem u vs
+              then q
               else WMap.add w ((v, u) :: try WMap.find w q with Not_found -> []) q) (WMap.add w rest q) (es v)
 
   let prim es s =

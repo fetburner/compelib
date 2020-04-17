@@ -38,9 +38,9 @@ end)
 let l = [3; 1; 4; 1]
 let n, f, g = CC.compress l;;
 List.map f l;;
-Array.init n g;;
+List.init n g;;
 
 let l = [100; 100; 100]
 let n, f, g = CC.compress l;;
 List.map f l;;
-Array.init n g;;
+List.init n g;;

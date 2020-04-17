@@ -28,11 +28,14 @@ struct
     (* 現在BFSで走査している頂点のリスト *)
     let vps = ref [(s, Path.nil)] in
     let rec bfs t =
-      try Some (Hashtbl.find d t)
-      with Not_found ->
-        match !vps with
-        | [] -> None
-        | _ :: _ -> vps := List.fold_left dfs [] !vps; bfs t
+      match Hashtbl.find_opt d t, !vps with
+      (* もう既に全ての頂点までの経路が分かっている *)
+      | None, [] -> None
+      (* 既に終点までの経路が分かっているので返す *)
+      | Some _ as ans, _ -> ans
+      (* 終点までの経路が分かっていないので，01BFSを続行 *)
+      | None, _ :: _ -> vps := List.fold_left dfs [] !vps; bfs t
+    (* 重さ0の辺をDFSで縮約 *)
     and dfs vps (v, p) =
       if Hashtbl.mem d v then vps
       else begin

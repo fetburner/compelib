@@ -91,27 +91,27 @@ end)
 
 let d = G.raw_bellman_ford 8
   [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.) ] 1;;
-Array.init 8 d;;
+List.init 8 d;;
 
 let d = G.raw_bellman_ford 8
   [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.) ] 1;;
-Array.init 8 d;;
+List.init 8 d;;
 
 let d = G.raw_bellman_ford 8
   [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.); (4, 7, 1.) ] 1;;
-Array.init 8 d;;
+List.init 8 d;;
 
 let d = G.bellman_ford
   (List.map (fun (u, v, c) -> (u * 10, v * 10, c))
   [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.) ]) 10;;
-Array.init 8 (fun v -> d @@ v * 10);;
+List.init 8 (fun v -> d @@ v * 10);;
 
 let d = G.bellman_ford
   (List.map (fun (u, v, c) -> (u * 10, v * 10, c))
   [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.) ]) 10;;
-Array.init 8 (fun v -> d @@ v * 10);;
+List.init 8 (fun v -> d @@ v * 10);;
 
 let d = G.bellman_ford
   (List.map (fun (u, v, c) -> (u * 10, v * 10, c))
   [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.); (4, 7, 1.) ]) 1;;
-Array.init 8 (fun v -> d @@ v * 10);;
+List.init 8 (fun v -> d @@ v * 10);;

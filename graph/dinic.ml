@@ -36,9 +36,9 @@ struct
     if v = t then f
     else begin
       let rec find () =
-        match Hashtbl.find iter v with
-        | exception Not_found -> Flow.zero
-        | (u, i) ->
+        match Hashtbl.find_opt iter v with
+        | None -> Flow.zero
+        | Some (u, i) ->
             Hashtbl.remove iter v;
             (* capacity i <= 0 *)
             if Flow.compare (capacity i) Flow.zero <= 0 || level u <= level v then find ()
@@ -47,7 +47,8 @@ struct
                 (* min f (capacity i) *)
                 if Flow.compare f (capacity i) <= 0 then f else capacity i in
               (* d <= 0 *)
-              if Flow.compare d Flow.zero <= 0 then find ()
+              if Flow.compare d Flow.zero <= 0
+              then find ()
               else (add_edge i d; d)
             end in find ()
     end
@@ -73,21 +74,27 @@ struct
       (* 逆辺 *)
       capacity.(i lxor 1) <- capacity.(i lxor 1) + c in
     let rec outer flow =
-      let level = G.bfs n (fun v ->
-        List.concat @@ List.map (fun (u, i) ->
-          if Flow.compare capacity.(i) Flow.zero <= 0 then []
-          else [(u, ())]) @@ Hashtbl.find_all adj v) s in
-      if level t = None then flow
-      else
-        let iter = Hashtbl.copy adj in
-        let rec inner flow =
-          let f = dfs (fun i -> capacity.(i)) add_edge iter level s t Flow.inf in
-          if Flow.compare f Flow.zero <= 0 then flow
-          else inner (Flow.( + ) flow f) in
-        outer @@ inner flow in
-    let f = outer Flow.zero in
-    (f, List.mapi (fun i (u, v, c, _) ->
-      (u, v, Flow.( - ) c capacity.(2 * i))) es)
+      let level = Fun.flip (G.bfs n) s @@ fun v ->
+        List.filter_map (fun (u, i) ->
+          if Flow.compare capacity.(i) Flow.zero <= 0
+          then None
+          else Some (u, ())) @@
+        Hashtbl.find_all adj v in
+      match level t with
+      | None -> flow
+      | Some _ ->
+          let iter = Hashtbl.copy adj in
+          let rec inner flow =
+            let open Flow in
+            let f = dfs (Array.get capacity) add_edge iter level s t inf in
+            if Flow.compare f Flow.zero <= 0
+            then flow
+            else inner (flow + f) in
+          outer @@ inner flow in
+    let open Flow in
+    let f = outer zero in
+    (f, Fun.flip List.mapi es @@ fun i (u, v, c, _) ->
+      (u, v, c - capacity.(2 * i)))
 end
 
 (* 蟻本p. 188のグラフで試す *)

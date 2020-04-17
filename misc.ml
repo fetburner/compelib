@@ -13,7 +13,8 @@ let rec comb n = function
   | 0 -> 1
   | r -> comb (n - 1) (r - 1) * n / r
 let comb n r =
-  if 2 * r <= n then comb n r
+  if 2 * r <= n
+  then comb n r
   else comb n (n - r)
 
 let rec take n = function
@@ -46,7 +47,8 @@ let rec fold_tournament dir f = function
 (* fold_tournament ( * ) [x1; x2; x3; x4; x5; x6; x7; x8 ... ] = (... (((x1 * x2) * (x3 * x4)) * ((x5 * x6) * (x7 * x8))) ...) * ( ... ) *)
 let fold_tournament f xs = fold_tournament true f xs
 
-let array_of_string s = Array.init (String.length s) (fun i -> s.[i])
+let list_of_string s = List.init (String.length s) (String.get s)
+let array_of_string s = Array.init (String.length s) (String.get s)
 
 exception Exodus
 let call_cc f =

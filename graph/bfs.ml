@@ -22,18 +22,20 @@ sig
     ('v -> Path.t option)
 end = struct
   let rec bfs_aux es d frontier t =
-    try Some (Hashtbl.find d t) with
-    | Not_found ->
-        match !frontier with
-        | [] -> None
-        | _ :: _ ->
-            frontier := List.fold_right (fun u ->
-              List.fold_right (fun (v, e) frontier ->
-                if Hashtbl.mem d v
-                then frontier
-                else (Hashtbl.add d v (Path.snoc (Hashtbl.find d u) e); v :: frontier))
-              (es u)) !frontier [];
-            bfs_aux es d frontier t
+    match Hashtbl.find_opt d t, !frontier with
+    (* もう既に全ての頂点までの経路が分かっている *)
+    | None, [] -> None
+    (* 既に終点までの経路が分かっているので返す *)
+    | Some _ as ans, _ -> ans
+    (* 終点までの経路が分かっていないので，BFSを続行 *)
+    | None, _ :: _ ->
+        frontier := List.fold_right (fun u ->
+          List.fold_right (fun (v, e) frontier ->
+            if Hashtbl.mem d v
+            then frontier
+            else (Hashtbl.add d v (Path.snoc (Hashtbl.find d u) e); v :: frontier))
+          (es u)) !frontier [];
+        bfs_aux es d frontier t
 
   (*
    * 終点に辿り着いた時点で探索を切り上げるが，

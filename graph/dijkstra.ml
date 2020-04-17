@@ -30,37 +30,25 @@ struct
     let q = ref @@ WMap.singleton Weight.zero [s] in
     (* ダイクストラ法のメインループ *)
     let rec dijkstra_aux t =
-      let ans =
-        (* AtCoderのOCaml処理系は4.02.3なので，find_optが使えない *)
-        try Some (VMap.find t !d)
-        with Not_found -> None in
-      match WMap.min_binding !q with
-      | exception Not_found -> ans
-      | (w, us) ->
-          if
-            (* 現時点で終点までの距離が分かっているか *)
-            match ans with
-            | None -> false
-            | Some x -> Weight.compare x w <= 0
-          (* 既に終点までの距離が分かっているので返す *)
-          then ans
-          else begin
-            (* 終点までの距離が分かっていないので，ダイクストラ法を続行 *)
-            q := WMap.remove w !q;
-            List.iter (fun u ->
-              if 0 <= Weight.compare (VMap.find u !d) w then
-                (* 未だ頂点uを訪れていない *)
-                List.iter (fun (v, c) ->
-                  let open Weight in
-                  if
-                    try 0 < Weight.compare (VMap.find v !d) (w + c)
-                    with Not_found -> true  (* d.(v) は無限大 *)
-                  then begin
+      match VMap.find_opt t !d, WMap.min_binding_opt !q with
+      (* もう既に全ての頂点までの距離が分かっている *)
+      | ans, None -> ans
+      (* 既に終点までの距離が分かっているので返す *)
+      | Some x as ans, Some (w, _) when Weight.compare x w <= 0 -> ans
+      (* 終点までの距離が分かっていないので，ダイクストラ法を続行 *)
+      | _, Some (w, us) ->
+          q := WMap.remove w !q;
+          Fun.flip List.iter us (fun u ->
+            if 0 <= Weight.compare (VMap.find u !d) w then
+              (* 未だ頂点uを訪れていない *)
+              Fun.flip List.iter (e u) (fun (v, c) ->
+                let open Weight in
+                match VMap.find_opt v !d with
+                | Some d when Weight.compare d (w + c) <= 0 -> ()
+                | _ ->
                     d := VMap.add v (w + c) !d;
-                    q := WMap.add (w + c) (v :: try WMap.find (w + c) !q with Not_found -> []) !q
-                  end) (e u)) us;
-            dijkstra_aux t
-          end in dijkstra_aux
+                    q := WMap.add (w + c) (v :: try WMap.find (w + c) !q with Not_found -> []) !q));
+          dijkstra_aux t in dijkstra_aux
 end
 
 (* sample code *)
@@ -87,7 +75,7 @@ let e =
     [ (3, 6.); (5, 9.) ];
     [ (0, 14.); (2, 2.); (4, 9.) ]|];;
 
-Array.init 7 (G.dijkstra (fun u -> e.(u)) 0);;
+List.init 7 @@ Fun.flip G.dijkstra 0 @@ Array.get e
 
 module G' = WeightedDirectedGraph (Int)
   (struct
@@ -103,7 +91,7 @@ let e' =
       let s = Printf.sprintf "%d->%d" u v in
       (v, (c, fun xs -> s :: xs)))) e;;
 
-Array.map (fun (Some (c, f)) -> (c, f [])) @@ Array.init 6 (G'.dijkstra (fun u -> e'.(u)) 0);;
+List.map (fun (Some (c, f)) -> (c, f [])) @@ List.init 6 @@ Fun.flip G'.dijkstra 0 @@ Array.get e';;
 
 (* 無限グラフ!!! *)
 module IntPair = struct
@@ -113,9 +101,8 @@ end
 
 module G = WeightedDirectedGraph (IntPair) (Float)
 
-let d = G.dijkstra
-  (fun (x, y) ->
-    List.map (fun v -> (v, float_of_int (abs x + abs y)))
-    [(x + 1, y); (x - 1, y); (x, y + 1); (x, y - 1)]) (0, 0);;
-Array.init 10 @@ fun x ->
-  Array.init 10 @@ fun y -> d (x, y);;
+let d = Fun.flip G.dijkstra (0, 0) @@ fun (x, y) ->
+  List.map (fun v -> (v, float_of_int (abs x + abs y)))
+  [(x + 1, y); (x - 1, y); (x, y + 1); (x, y - 1)];;
+List.init 10 @@ fun x ->
+  List.init 10 @@ fun y -> d (x, y);;
