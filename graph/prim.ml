@@ -20,36 +20,30 @@ struct
   module VSet = Set.Make (Vertex)
   module WMap = Map.Make (Weight)
 
-  (*
-   * プリム法のメインループ
-   * es : 隣接リスト
-   * vs : 訪れた頂点の集合
-   * q : 訪れた頂点から伸びる辺が重み順に入ったヒープ
-   * acc : 最小全域木に使うのが確定した辺を入れるやつ
-   *)
-  let rec prim_aux es acc vs q =
-    match WMap.min_binding q with
-    | exception Not_found -> acc
-    | (w, []) -> prim_aux es acc vs (WMap.remove w q)
-    | (w, (u, v) :: rest) ->
-        if VSet.mem v vs then
-          (* vは既に訪れていた *)
-          prim_aux es acc vs (WMap.add w rest q)
-        else
-          (* vはまだ訪れていなかった *)
-          prim_aux es ((u, v, w) :: acc) (VSet.add v vs) @@
-            (* vから伸びる辺をキューに追加 *)
-            List.fold_left (fun q (u, w) ->
-              (* 現時点で既に訪れている頂点への辺は追加しない *)
-              if VSet.mem u vs
-              then q
-              else WMap.add w ((v, u) :: try WMap.find w q with Not_found -> []) q) (WMap.add w rest q) (es v)
-
-  let prim es s =
-    prim_aux es [] (VSet.singleton s) @@
-      (* 始点から伸びる辺をキューに入れておく *)
-      List.fold_left (fun q (v, w) ->
-        WMap.add w ((s, v) :: try WMap.find w q with Not_found -> []) q) WMap.empty (es s)
+  let prim es =
+    (*
+     * プリム法のメインループ
+     * es : 隣接リスト
+     * vs : 訪れた頂点の集合
+     * q : 訪れた頂点から伸びる辺が重み順に入ったヒープ
+     * acc : 最小全域木に使うのが確定した辺を入れるやつ
+     *)
+    let rec prim acc vs q =
+      match WMap.min_binding_opt q with
+      | None -> acc
+      | Some (w, []) -> prim acc vs (WMap.remove w q)
+      | Some (w, (u, v) :: rest) ->
+          ( if VSet.mem v vs
+            (* vは既に訪れていた *)
+            then prim acc vs
+            (* vはまだ訪れていなかった *)
+            else prim_aux ((u, v, w) :: acc) vs v ) (WMap.add w rest q)
+    (* vを訪れ，vから伸びる辺をキューに追加してループを続行する *)
+    and prim_aux acc vs v q =
+      prim acc (VSet.add v vs) @@
+      List.fold_right (fun (u, w) ->
+        WMap.update w @@ fun vus -> Some ((v, u) :: Option.value ~default:[] vus)) (es v) q in
+    Fun.flip (prim_aux [] VSet.empty) WMap.empty
 end
 
 (* sample code *)
