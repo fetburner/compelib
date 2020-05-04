@@ -1,87 +1,116 @@
 (* 永続素集合データ構造 *)
-module PUnionFindFn
-  (* 永続ハッシュテーブルの実装 *)
-  (PHashtbl : sig
-    type 'a t
-    type key
-    val create : int -> 'a t
-    val find : 'a t -> key -> 'a
-    val replace : 'a t -> key -> 'a -> 'a t
-    val compare_key : key -> key -> int
-  end) :
-sig
-  type t
-  type class_
+module PersistentUnionFind :
+  sig
+    module type S =
+      sig
+        type t
+        type elt
+        module Class : sig
+          (* 集合の識別子 *)
+          type t
+          val compare : t -> t -> int
+        end
+        (* 要素がどの集合に属するか調べる *)
+        val find : elt -> t -> Class.t
+        (* 与えられた集合同士を合併する *)
+        val union : Class.t -> Class.t -> t -> t
+        (* 与えられた集合に属する要素の数を求める *)
+        val cardinal : Class.t -> t -> int
+      end
+    (* 永続ハッシュテーブルを用いた実装 *)
+    module ByHashtbl : sig
+      module Make :
+        functor (Elt : Map.OrderedType) ->
+        sig
+          include S
+          (* n要素が異なる集合に属した素集合データ構造を作成 *)
+          val make : int -> t
+        end with type elt = Elt.t
+    end
+    (* Mapを用いた実装 *)
+    module ByMap : sig
+      module Make :
+        functor (Elt : Map.OrderedType) ->
+        sig
+          include S
+          (* 全ての要素が異なる集合に属した素集合データ構造を作成 *)
+          val make : unit -> t
+        end with type elt = Elt.t
+    end
+  end
+= struct
+    module type S =
+      sig
+        type t
+        type elt
+        module Class : sig
+          type t
+          val compare : t -> t -> int
+        end
+        val find : elt -> t -> Class.t
+        val union : Class.t -> Class.t -> t -> t
+        val cardinal : Class.t -> t -> int
+      end
 
-  (* n要素の永続素集合データ構造を作るが，ハッシュなのでn要素以上も入れられる *)
-  val make : int -> t
-  val find : t -> PHashtbl.key -> class_
-  val union : t -> PHashtbl.key -> PHashtbl.key -> t
+    module Core
+      (Elt : sig
+        type t
+        val compare : t -> t -> int
+      end)
+      (EMap : sig
+        type 'a t
+        val add : Elt.t -> 'a -> 'a t -> 'a t
+        val find_opt : Elt.t -> 'a t -> 'a option
+      end)
+    = struct
+      type node = Leaf of int | Link of Elt.t
+      type elt = Elt.t
+      type t = node EMap.t ref
 
-  val compare_class : class_ -> class_ -> int
-end =
-struct
-  type t =
-    { rank : int PHashtbl.t;
-      mutable parent : PHashtbl.key PHashtbl.t }
-  type class_ = PHashtbl.key
+      module Class = Elt
 
-  let make n = { rank = PHashtbl.create n; parent = PHashtbl.create n }
+      let cardinal x uf =
+        match EMap.find_opt x !uf with
+        | None -> 1
+        | Some (Leaf x) -> x
+        | Some (Link _) -> raise (Invalid_argument "cardinal")
 
-  let rec find parent i k =
-    let j = try PHashtbl.find parent i with Not_found -> i in
-    if PHashtbl.compare_key i j = 0 then k parent i
-    else find parent j (fun parent r -> k (PHashtbl.replace parent i r) r)
-  let find ({ parent } as h) i =
-    find parent i (fun parent r -> h.parent <- parent; r)
+      let rec find x uf =
+        match EMap.find_opt x !uf with
+        | None | Some (Leaf _) -> x
+        | Some (Link y) ->
+            let z = find y uf in
+            uf := EMap.add x (Link z) !uf; z
 
-  let union uf x y =
-    let cx = find uf x in
-    let cy = find uf y in
-    if PHashtbl.compare_key cx cy = 0 then uf
-    else begin
-      let rx = try PHashtbl.find uf.rank x with Not_found -> 0 in
-      let ry = try PHashtbl.find uf.rank y with Not_found -> 0 in
-      match compare rx ry with
-      | -1 -> { uf with parent = PHashtbl.replace uf.parent cx cy }
-      | 1 ->  { uf with parent = PHashtbl.replace uf.parent cy cx }
-      | 0 ->
-          { parent = PHashtbl.replace uf.parent cy cx;
-            rank = PHashtbl.replace uf.rank cx (rx + 1) }
+      let union x y uf =
+        if Class.compare x y = 0
+        then uf
+        else begin
+          let x, y = 
+            if cardinal x uf <= cardinal y uf then x, y else y, x in
+          ref @@
+          EMap.add y (Link x) @@
+          EMap.add x (Leaf (cardinal x uf + cardinal y uf)) !uf
+        end
     end
 
-  let compare_class = PHashtbl.compare_key
+    module ByHashtbl = struct
+      module Make (Elt : Map.OrderedType) = struct
+        include (Core (Elt) (struct
+          type 'a t = (Elt.t, 'a) PHashtbl.t
+          let add x y h = PHashtbl.replace h x y
+          let find_opt x h = try Some (PHashtbl.find h x) with Not_found -> None
+        end))
+
+        let make n = ref (PHashtbl.create n)
+      end
+    end
+
+    module ByMap = struct
+      module Make (Elt : Map.OrderedType) = struct
+        module EMap = Map.Make (Elt)
+        include (Core (Elt) (EMap))
+        let make () = ref EMap.empty
+      end
+    end
 end
-
-(* 永続ハッシュテーブルによる素集合データ構造 *)
-module PUnionFindHashtbl
-  (Index : sig
-    type t
-    val compare : t -> t -> int
-  end)
-= PUnionFindFn
-  (struct
-    type 'a t = (Index.t, 'a) PHashtbl.t
-    type key = Index.t
-    let create n = PHashtbl.create n
-    let find = PHashtbl.find
-    let replace = PHashtbl.replace
-    let compare_key = Index.compare
-  end)
-
-(* Mapによる素集合データ構造 *)
-module PUnionFindMap
-  (Index : sig
-    type t
-    val compare : t -> t -> int
-  end)
-= PUnionFindFn
-  (struct
-    module IMap = Map.Make (Index)
-    type 'a t = 'a IMap.t
-    type key = Index.t
-    let create _ = IMap.empty
-    let find m i = IMap.find i m
-    let replace m i x = IMap.add i x m
-    let compare_key = Index.compare
-  end)

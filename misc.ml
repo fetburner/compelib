@@ -36,14 +36,15 @@ let floor_sqrt z = floor_sqrt 0 0 (~-z) (1 lsl 30) (1 lsl 60)
 let rec fold_tournament dir f = function
   | [x] -> x
   | x :: xs ->
-      List.fold_left (fun (acc, prev) x ->
-        match prev with
-        | None -> (acc, Some x)
-        | Some y -> ((if dir then f y x else f x y) :: acc, None)) ([], Some x) xs
-      |> (function
-          | (acc, None) -> acc
-          | (acc, Some x) -> x :: acc)
-      |> fold_tournament (not dir) f
+      fold_tournament (not dir) f @@
+      match
+        List.fold_left (fun (acc, prev) x ->
+          match prev with
+          | None -> (acc, Some x)
+          | Some y -> ((if dir then f y x else f x y) :: acc, None)) ([], Some x) xs
+      with 
+      | (acc, None) -> acc
+      | (acc, Some x) -> x :: acc
 (* fold_tournament ( * ) [x1; x2; x3; x4; x5; x6; x7; x8 ... ] = (... (((x1 * x2) * (x3 * x4)) * ((x5 * x6) * (x7 * x8))) ...) * ( ... ) *)
 let fold_tournament f xs = fold_tournament true f xs
 
