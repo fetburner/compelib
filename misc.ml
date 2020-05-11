@@ -9,14 +9,6 @@ let rec gcd n m =
 
 let lcm n m = n / gcd n m * m
 
-let rec comb n = function
-  | 0 -> 1
-  | r -> comb (n - 1) (r - 1) * n / r
-let comb n r =
-  if 2 * r <= n
-  then comb n r
-  else comb n (n - r)
-
 let rec take n = function
   | [] -> []
   | x :: xs ->
