@@ -1,4 +1,6 @@
 module FlowNetwork
+  (* 頂点 *)
+  (Vertex : Hashtbl.HashedType)
   (* 流量 *)
   (Flow : sig
     type t
@@ -9,96 +11,105 @@ module FlowNetwork
     val compare : t -> t -> int
   end) :
 sig
+  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
   val max_flow :
-    (* 頂点の数（Hashtblを用いるので目安程度） *)
+    (* 頂点の数（ハッシュテーブルを用いるので目安程度） *)
     int ->
-    (* 各辺とその逆辺の容量 *)
-    ('v * 'v * Flow.t * Flow.t) list ->
+    (* 各辺とその容量 *)
+    (Vertex.t * Vertex.t * Flow.t) church_list ->
     (* 始点 *)
-    'v ->
+    Vertex.t ->
     (* 終点 *)
-    'v ->
+    Vertex.t ->
     (* 最大フロー *)
     Flow.t *
     (* 最大フローを流した際の各辺の流量 *)
-    ('v * 'v * Flow.t) list
+    (Vertex.t * Vertex.t * Flow.t) church_list
 end =
 struct
-  module G = DirectedGraph (struct
+  module VHash = Hashtbl.Make (Vertex)
+  module G = DirectedGraph (VHash) (struct
     type t = int
     type edge = unit
     let nil = 0
     let snoc t _ = t + 1
   end)
 
-  (* 増加パスをDFSで探し，流せるだけ流していく *)
-  let rec dfs capacity add_edge iter level v t f =
-    if v = t then f
-    else begin
-      let rec find () =
-        match Hashtbl.find_opt iter v with
-        | None -> Flow.zero
-        | Some (u, i) ->
-            Hashtbl.remove iter v;
-            (* capacity i <= 0 *)
-            if Flow.compare (capacity i) Flow.zero <= 0 || level u <= level v then find ()
-            else begin
-              let d = dfs capacity add_edge iter level u t @@
-                (* min f (capacity i) *)
-                if Flow.compare f (capacity i) <= 0 then f else capacity i in
-              (* d <= 0 *)
-              if Flow.compare d Flow.zero <= 0
-              then find ()
-              else (add_edge i d; d)
-            end in find ()
-    end
+  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+  type edge = { to_ : Vertex.t; mutable capacity : Flow.t; is_rev : bool; rev : edge }
 
   let max_flow n es s t =
-    assert (s <> t);
-    (* 各辺に流せる流量 *)
-    let capacity = Array.make (2 * List.length es) Flow.zero in
+    assert (not (Vertex.equal s t));
     (* 逆辺を張りつつ，隣接リスト形式に変換 *)
-    let adj = Hashtbl.create n in
-    List.iteri (fun i (u, v, c, c') ->
-      (* 各辺は番号で管理する *)
-      Hashtbl.add adj u (v, 2 * i);
-      (* 容量はcapacityを見てほしい *)
-      capacity.(2 * i) <- c;
-      (* 逆辺 *)
-      Hashtbl.add adj v (u, 2 * i + 1);
-      capacity.(2 * i + 1) <- c') es;
-    (* 番号iの辺にcだけフローを流す *)
-    let add_edge i c =
-      let open Flow in
-      capacity.(i) <- capacity.(i) - c;
-      (* 逆辺 *)
-      capacity.(i lxor 1) <- capacity.(i lxor 1) + c in
+    let adj = VHash.create n in
+    es.fold (fun (u, v, c) () ->
+      let rec edge = { to_ = v; capacity = c; is_rev = false; rev = rev_edge }
+      and rev_edge = { to_ = u; capacity = Flow.zero; is_rev = true; rev = edge } in
+      VHash.add adj u edge;
+      VHash.add adj v rev_edge) ();
+
+    (* 増加パスをDFSで探し，流せるだけ流していく *)
+    let rec dfs iter level v f =
+      if Vertex.equal v t
+      then f
+      else begin
+        let rec find () =
+          match VHash.find iter v with
+          | exception Not_found -> Flow.zero
+          | e ->
+              VHash.remove iter v;
+              let d =
+                if Flow.compare e.capacity Flow.zero <= 0 || level e.to_ <= level v
+                then Flow.zero
+                else dfs iter level e.to_ @@
+                  if Flow.compare f e.capacity <= 0 then f else e.capacity in
+              if Flow.compare d Flow.zero <= 0
+              then find ()
+              else begin
+                let open Flow in
+                e.capacity <- e.capacity - d;
+                e.rev.capacity <- e.rev.capacity + d; d
+              end in 
+        find ()
+      end in
+
     let rec outer flow =
-      let level = Fun.flip (G.bfs n) s @@ fun v ->
-        List.filter_map (fun (u, i) ->
-          if Flow.compare capacity.(i) Flow.zero <= 0
-          then None
-          else Some (u, ())) @@
-        Hashtbl.find_all adj v in
+      let level = G.bfs n (fun v ->
+        { G.fold = fun f ->
+          List.fold_right (fun e acc ->
+            if Flow.compare e.capacity Flow.zero <= 0
+            then acc
+            else f (e.to_, ()) acc) @@
+          VHash.find_all adj v }) s in
       match level t with
       | None -> flow
       | Some _ ->
-          let iter = Hashtbl.copy adj in
+          let iter = VHash.copy adj in
           let rec inner flow =
-            let open Flow in
-            let f = dfs (Array.get capacity) add_edge iter level s t inf in
+            let f = dfs iter level s Flow.inf in
             if Flow.compare f Flow.zero <= 0
             then flow
-            else inner (flow + f) in
-          outer @@ inner flow in
+            else let open Flow in inner (flow + f) in
+          outer (inner flow) in
+
+    let f = outer Flow.zero in
     let open Flow in
-    let f = outer zero in
-    (f, Fun.flip List.mapi es @@ fun i (u, v, c, _) ->
-      (u, v, c - capacity.(2 * i)))
-end
+    (f, { fold = fun f ->
+      VHash.fold (fun u e acc ->
+        if e.is_rev
+        then acc
+        else f (u, e.to_,  e.rev.capacity) acc) adj })
+end;;
 
 (* 蟻本p. 188のグラフで試す *)
-module G = FlowNetwork (struct
+module G = FlowNetwork
+(struct
+  type t = int
+  let equal = ( = )
+  let hash = Hashtbl.hash
+end)
+(struct
   type t = int
   let inf = max_int
   let zero = 0
@@ -107,6 +118,10 @@ module G = FlowNetwork (struct
   let compare = compare
 end);;
 
-G.max_flow 5
-  [ (0, 1, 10, 0); (0, 2, 2, 0); (1, 2, 6, 0); (1, 3, 6, 0);
-    (3, 2, 3, 0); (3, 4, 8, 0); (2, 4, 5, 0) ] 0 4;;
+let (f, e) = G.max_flow 5
+  { fold = fun f -> List.fold_right f 
+    [ (0, 1, 10); (0, 2, 2);
+      (1, 2, 6); (1, 3, 6);
+      (2, 4, 5);
+      (3, 2, 3); (3, 4, 8) ] } 0 4;;
+e.fold List.cons [];;

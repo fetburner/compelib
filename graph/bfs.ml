@@ -1,4 +1,6 @@
 module DirectedGraph
+  (* 頂点をキーとしたハッシュテーブルの実装 *)
+  (VHash : Hashtbl.S)
   (* 道の表現 *)
   (Path : sig
     type t
@@ -10,19 +12,23 @@ module DirectedGraph
     val snoc : t -> edge -> t
   end) :
 sig
+  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
   (* BFSにより，重みのないグラフの最短経路を求める *)
   val bfs :
-    (* 頂点数（Hashtblを用いるので目安程度） *)
+    (* 頂点数（ハッシュテーブルを用いるので目安程度） *)
     int ->
     (* 辺の名前が付いた隣接リスト *)
-    ('v -> ('v * Path.edge) list) ->
+    (VHash.key -> (VHash.key * Path.edge) church_list) ->
     (* 始点 *)
-    'v ->
+    VHash.key ->
     (* 最短経路を返す関数 辿り着けなければNoneを返す） *)
-    ('v -> Path.t option)
+    (VHash.key -> Path.t option)
 end = struct
+  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
   let rec bfs_aux es d frontier t =
-    match Hashtbl.find_opt d t, !frontier with
+    match VHash.find_opt d t, !frontier with
     (* もう既に全ての頂点までの経路が分かっている *)
     | None, [] -> None
     (* 既に終点までの経路が分かっているので返す *)
@@ -30,11 +36,10 @@ end = struct
     (* 終点までの経路が分かっていないので，BFSを続行 *)
     | None, _ :: _ ->
         frontier := List.fold_right (fun u ->
-          List.fold_right (fun (v, e) frontier ->
-            if Hashtbl.mem d v
+          (es u).fold @@ fun (v, e) frontier ->
+            if VHash.mem d v
             then frontier
-            else (Hashtbl.add d v (Path.snoc (Hashtbl.find d u) e); v :: frontier))
-          (es u)) !frontier [];
+            else (VHash.add d v (Path.snoc (VHash.find d u) e); v :: frontier)) !frontier [];
         bfs_aux es d frontier t
 
   (*
@@ -43,14 +48,23 @@ end = struct
    * （#trace bfs_aux すると分かりやすい）
    *)
   let bfs n es s =
-    let d = Hashtbl.create n in
-    Hashtbl.add d s Path.nil;
+    let d = VHash.create n in
+    VHash.add d s Path.nil;
     let frontier = ref [s] in
     bfs_aux es d frontier
 end
 
+module IntPairHash = Hashtbl.Make
+  (struct
+    type t = int * int
+    let equal = ( = )
+    let hash = Hashtbl.hash
+  end)
+
 (* 経路情報も欲しい場合 *)
-module G = DirectedGraph (struct
+module G = DirectedGraph
+(IntPairHash)
+(struct
   type t = string list
   type edge = string
   let nil = []
@@ -63,28 +77,21 @@ let maze =
     "..#.#.";
     "..##..";
     "#....."|];;
-G.bfs 30 (fun (i, j) ->
-  [(i - 1, j); (i + 1, j); (i, j - 1); (i, j + 1)]
-  |> List.filter (fun (i, j) -> try maze.(j).[i] = '.' with _ -> false)
-  |> List.map (fun (i', j') -> ((i', j'), Printf.sprintf "(%d,%d)->(%d,%d)" i j i' j'))) (0, 0) (3, 2);;
-
-let maze =
-  [|"......";
-    ".#####";
-    "..#...";
-    "..##..";
-    "#....."|];;
 
 let d = G.bfs 30 (fun (i, j) ->
-  [(i - 1, j); (i + 1, j); (i, j - 1); (i, j + 1)]
-  |> List.filter (fun (i, j) -> try maze.(j).[i] = '.' with _ -> false)
-  |> List.map (fun (i', j') -> ((i', j'), Printf.sprintf "(%d,%d)->(%d,%d)" i j i' j'))) (0, 0);;
+  { G.fold = fun f ->
+    List.fold_right (fun (i', j') acc ->
+      match maze.(j').[i'] = '.' with
+      | false | exception (Invalid_argument _) -> acc
+      | true -> f ((i', j'), Printf.sprintf "(%d,%d)->(%d,%d)" i j i' j') acc)
+    [(i - 1, j); (i + 1, j); (i, j - 1); (i, j + 1)] }) (0, 0);;
 d (5, 0);;
 (* 途中までの計算結果が再利用される *)
 d (3, 2);;
-    
+
 (* 距離だけ欲しい場合 *)
-module G = DirectedGraph (struct
+module G = DirectedGraph (IntPairHash)
+(struct
   type t = int
   type edge = unit
   let nil = 0
@@ -92,8 +99,11 @@ module G = DirectedGraph (struct
 end)
 
 let d = G.bfs 30 (fun (i, j) ->
-  [(i - 1, j); (i + 1, j); (i, j - 1); (i, j + 1)]
-  |> List.filter (fun (i, j) -> try maze.(j).[i] = '.' with _ -> false)
-  |> List.map (fun (i', j') -> ((i', j'), ()))) (0, 0);;
+  { G.fold = fun f ->
+    List.fold_right (fun (i, j) acc ->
+      match maze.(j).[i] = '.' with
+      | false | exception (Invalid_argument _) -> acc
+      | true -> f ((i, j), ()) acc)
+    [(i - 1, j); (i + 1, j); (i, j - 1); (i, j + 1)] }) (0, 0);;
 d (5, 0);;
 d (3, 2);;
