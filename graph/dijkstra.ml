@@ -12,13 +12,15 @@ module WeightedDirectedGraph
         val compare : t -> t -> int
       end) ->
       sig
+        type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
         (* 頂点を[0, n)の自然数に限定したグラフに対してのダイクストラ法
            時間計算量O(E log E)なので，疎なグラフなら速い *)
         val dijkstra :
         (* 頂点数n *)
         int ->
         (* 隣接リスト *)
-        (int -> (int * Weight.t) list) ->
+        (int -> (int * Weight.t) church_list) ->
         (* 始点 *)
         int ->
         (* 始点から辿り着けなければinfを返す関数
@@ -31,7 +33,7 @@ module WeightedDirectedGraph
         (* 頂点数n *)
         int ->
         (* 隣接リスト *)
-        (int -> (int * Weight.t) list) ->
+        (int -> (int * Weight.t) church_list) ->
         (* 始点 *)
         int ->
         (* 始点から辿り着けなければinfを返す関数
@@ -56,11 +58,13 @@ module WeightedDirectedGraph
         val compare : t -> t -> int
       end) ->
       sig
+        type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
         val dijkstra :
         (* 頂点数（Hashtbl.tを用いるので目安程度） *)
         int ->
         (* 隣接リスト *)
-        (Vertex.t -> (Vertex.t * Weight.t) list) ->
+        (Vertex.t -> (Vertex.t * Weight.t) church_list) ->
         (* 始点 *)
         Vertex.t ->
         (* 始点から辿り着けなければNot_foundを投げる関数
@@ -85,9 +89,11 @@ module WeightedDirectedGraph
         val compare : t -> t -> int
       end) ->
       sig
+        type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
         val dijkstra :
         (* 隣接リスト *)
-        (Vertex.t -> (Vertex.t * Weight.t) list) ->
+        (Vertex.t -> (Vertex.t * Weight.t) church_list) ->
         (* 始点 *)
         Vertex.t ->
         (* 始点から辿り着けなければNot_foundを投げる関数
@@ -115,6 +121,8 @@ end
       val update : t -> vertex -> W.t -> unit
     end) =
   struct
+    type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
     module WMap = Map.Make (W)
 
     let dijkstra d e s =
@@ -131,16 +139,16 @@ end
             (* 終点までの距離が分かっていないので，ダイクストラ法を続行 *)
             | _ | exception Not_found ->
                 q := WMap.remove w !q;
-                List.iter (fun u ->
+                Fun.flip List.iter us (fun u ->
                   if 0 <= W.compare (VArray.find d u) w then
                     (* 未だ頂点uを訪れていない *)
-                    List.iter (fun (v, c) ->
+                    Fun.flip (e u).fold () @@ fun (v, c) () ->
                       let open W in
                       match VArray.find d v with
                       | d when W.compare d (w + c) <= 0 -> ()
                       | _ | exception Not_found ->
                           VArray.update d v (w + c);
-                          q := WMap.update (w + c) (fun vs -> Some (v :: Option.value ~default:[] vs)) !q) (e u)) us;
+                          q := WMap.update (w + c) (fun vs -> Some (v :: Option.value ~default:[] vs)) !q);
                 dijkstra_aux t in
       dijkstra_aux
   end
@@ -166,10 +174,10 @@ end
                 if W.compare d.(u) d.(v) < 0
                 then (u, v :: us)
                 else (v, u :: us)) (v, []) vs in
-              List.iter (fun (v, c) ->
+              Fun.flip (e u).fold () (fun (v, c) () ->
                 let open W in
                 if 0 < W.compare d.(v) (d.(u) + c) then
-                  d.(v) <- d.(u) + c) (e u);
+                  d.(v) <- d.(u) + c);
               dijkstra_dense_aux us in
         dijkstra_dense_aux (List.init n Fun.id);
         Array.get d
@@ -225,7 +233,8 @@ let e =
     [ (3, 6.); (5, 9.) ];
     [ (0, 14.); (2, 2.); (4, 9.) ]|];;
 
-List.init 7 @@ Fun.flip (G.dijkstra 7) 0 @@ Array.get e
+List.init 7 @@ Fun.flip (G.dijkstra 7) 0 @@ fun u ->
+  { WeightedDirectedGraph.fold = fun f -> List.fold_right f e.(u) };;
 
 module G' = WeightedDirectedGraph.ByArray.Make
   (struct
@@ -243,7 +252,8 @@ let e' =
       (v, (c, fun xs -> s :: xs));;
 
 List.map (fun (c, f) -> (c, f [])) @@
-List.init 6 @@ Fun.flip (G'.dijkstra 7) 0 @@ Array.get e';;
+List.init 6 @@ Fun.flip (G'.dijkstra 7) 0 @@ fun u ->
+  { WeightedDirectedGraph.fold = fun f -> List.fold_right f e'.(u) };;
 
 (* 無限グラフ!!! *)
 module IntPair = struct
@@ -254,7 +264,9 @@ end
 module G = WeightedDirectedGraph.ByMap.Make (IntPair) (Float)
 
 let d = Fun.flip G.dijkstra (0, 0) @@ fun (x, y) ->
-  List.map (fun v -> (v, float_of_int (abs x + abs y)))
-  [(x + 1, y); (x - 1, y); (x, y + 1); (x, y - 1)];;
+  { WeightedDirectedGraph.fold = fun f ->
+    List.fold_right f @@
+    List.map (fun v -> (v, float_of_int (abs x + abs y)))
+    [(x + 1, y); (x - 1, y); (x, y + 1); (x, y - 1)] };;
 List.init 10 @@ fun x ->
   List.init 10 @@ fun y -> d (x, y);;
