@@ -14,8 +14,7 @@ sig
     (* 頂点数n *)
     int ->
     (* 辺のリスト
-       頂点は0からn-1までの整数でなくてはならない
-       2n回呼び出されるので，リストを作るのに時間がかかるならメモ化すること *)
+       頂点は0からn-1までの整数でなくてはならない *)
     (int * int * Weight.t) church_list ->
     (* 始点 *)
     int ->
@@ -32,33 +31,46 @@ struct
     let d = Array.make n Weight.inf in
     (* 経路に負閉路が含まれる頂点を覚えるやつ *)
     let neg = Array.make n false in
+    (* 始点より終点のインデックスが大きくなる辺を集めた隣接リスト *)
+    let inc = Array.make n [] in
+    (* 始点より終点のインデックスが小さくなる辺を集めた隣接リスト *)
+    let dec = Array.make n [] in
+    es.fold (fun ((u, v, c) as e) () ->
+      if u <= v
+      then inc.(u) <- e :: inc.(u)
+      else dec.(u) <- e :: dec.(u)) ();
     d.(s) <- Weight.zero;
-    (* n-1回目までの反復
-       途中の反復で更新が行われなければfalseを返す *)
-    let rec loop n =
-      n <= 0 ||
-      es.fold (fun (u, v, c) b -> (* bは更新の有無 *)
-        let open Weight in
+    (* 残りの反復回数 *)
+    let i = ref n in
+    (* 更新が行われたか *)
+    let is_modified = ref true in
+    (* 各辺の処理 *)
+    let f (u, v, c) =
+      let open Weight in
+      if neg.(u) then neg.(v) <- true;
+      if
         (* 原点から到達できない頂点は更新しない *)
         0 < Weight.compare inf d.(u)
         (* c は u から v への辺の重さ
            d.(u) + c < d.(v) *)
         && 0 < Weight.compare d.(v) (d.(u) + c)
-        && (d.(v) <- d.(u) + c; true) || b) false
-      && loop (n - 1) in
-    (* n回目以降の反復を行う関数
-       途中の反復で更新が行われなければfalseを返す *)
-    let rec loop' n =
-      n <= 0 ||
-      es.fold (fun (u, v, c) b ->
-        let open Weight in
-        if neg.(u) then neg.(v) <- true;
-        0 < Weight.compare inf d.(u)
-        && 0 < Weight.compare d.(v) (d.(u) + c)
-        (* n 回目以降に変更が起こった場合，v までの経路に負閉路が含まれている *)
-        && (d.(v) <- d.(u) + c; neg.(v) <- true; true) || b) false
-      && loop' (n - 1) in
-    if loop (n - 1) then ignore (loop' n);
+      then begin
+        d.(v) <- d.(u) + c;
+        is_modified := true;
+        if !i <= succ n lsr 1 then neg.(v) <- true
+      end in
+    while 0 < !i && !is_modified do
+      is_modified := false;
+      (* インデックスが増加する辺の処理 *)
+      for u = 0 to n - 1 do
+        List.iter f inc.(u)
+      done;
+      (* インデックスが減少する辺の処理 *)
+      for u = n - 1 downto 0 do
+        List.iter f dec.(u)
+      done;
+      decr i
+    done;
     fun v -> if neg.(v) then Weight.neg_inf else d.(v)
 end
 
