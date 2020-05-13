@@ -1,117 +1,86 @@
 module WeightedDirectedGraph
-  (Vertex : sig
-    type t
-    val compare : t -> t -> int
-  end)
   (Weight : sig
     type t
+    val inf : t (* オーバーフローの恐れはないので，max_intとか突っ込んでも良い *)
     val zero : t
+    val neg_inf : t (* オーバーフローの恐れはないので，min_intとか突っ込んでも良い *)
     val ( + ) : t -> t -> t
     val compare : t -> t -> int
   end) :
 sig
-  (* 配列版の実装 *)
-  val raw_bellman_ford :
+  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+
+  val bellman_ford :
     (* 頂点数n *)
     int ->
-    (* 辺のリスト *)
-    (* 頂点は0からn-1までの整数でなくてはならない *)
-    (int * int * Weight.t) list ->
+    (* 辺のリスト
+       頂点は0からn-1までの整数でなくてはならない
+       2n回呼び出されるので，リストを作るのに時間がかかるならメモ化すること *)
+    (int * int * Weight.t) church_list ->
     (* 始点 *)
     int ->
-    (int -> [ `Weight of Weight.t | `Inf | `NegInf ])
-
-  (* 座標圧縮により様々な型を使えるようにしたバージョン *)
-  val bellman_ford :
-    (* 辺のリスト *)
-    (Vertex.t * Vertex.t * Weight.t) list ->
-    (* 始点 *)
-    Vertex.t ->
-    (Vertex.t -> [ `Weight of Weight.t | `Inf | `NegInf ])
+    (* 頂点を受け取り，そこまでの距離を返す関数
+       頂点に到達するパスが無ければinfを返し，
+       そこに到達するまでに負閉路があればneg_infを返す *)
+    (int -> Weight.t)
 end =
 struct
-  module CC = CoordComp (Vertex)
-  module Weight' = WithInf (Weight)
+  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
 
-  let raw_bellman_ford n es s =
+  let bellman_ford n es s =
     (* 距離を覚えるやつ *)
-    let d = Array.make n Weight'.inf in
+    let d = Array.make n Weight.inf in
     (* 経路に負閉路が含まれる頂点を覚えるやつ *)
     let neg = Array.make n false in
-    d.(s) <- Weight'.zero;
-    for i = 0 to 2 * n - 1 do
-      List.iter (fun (u, v, c) ->
-        let open Weight' in
-        (* c は u から v への辺の重さ *)
-        (* d.(u) + c < d.(v) *)
-        if 0 < compare d.(v) (d.(u) + Some c) then begin
-          d.(v) <- d.(u) + Some c;
-          if n - 1 <= i then
-            (* n 回目以降に変更が起こった場合，v までの経路に負閉路が含まれている *)
-            neg.(v) <- true
-        end) es
-    done;
-    fun v ->
-      if neg.(v) then `NegInf
-      else
-        match d.(v) with
-        | None -> `Inf
-        | Some d -> `Weight d
-
-  let bellman_ford es s =
-    let (n, comp, _) =
-      CC.compress @@
-        List.concat @@
-          List.map (fun (u, v, _) -> [u; v]) es in
-    match
-      raw_bellman_ford n
-        (List.map (fun (u, v, c) -> (comp u, comp v, c)) es) (comp s)
-    with
-    | exception Not_found -> (* 始点から延びる辺がない *)
-        fun _ -> `Inf
-    | d ->
-        fun v -> try d (comp v) with Not_found -> `Inf
+    d.(s) <- Weight.zero;
+    (* n-1回目までの反復
+       途中の反復で更新が行われなければfalseを返す *)
+    let rec loop n =
+      n <= 0 ||
+      es.fold (fun (u, v, c) b -> (* bは更新の有無 *)
+        let open Weight in
+        (* 原点から到達できない頂点は更新しない *)
+        0 < Weight.compare inf d.(u)
+        (* c は u から v への辺の重さ
+           d.(u) + c < d.(v) *)
+        && 0 < Weight.compare d.(v) (d.(u) + c)
+        && (d.(v) <- d.(u) + c; true) || b) false
+      && loop (n - 1) in
+    (* n回目以降の反復を行う関数
+       途中の反復で更新が行われなければfalseを返す *)
+    let rec loop' n =
+      n <= 0 ||
+      es.fold (fun (u, v, c) b ->
+        let open Weight in
+        if neg.(u) then neg.(v) <- true;
+        0 < Weight.compare inf d.(u)
+        && 0 < Weight.compare d.(v) (d.(u) + c)
+        (* n 回目以降に変更が起こった場合，v までの経路に負閉路が含まれている *)
+        && (d.(v) <- d.(u) + c; neg.(v) <- true; true) || b) false
+      && loop' (n - 1) in
+    if loop (n - 1) then ignore (loop' n);
+    fun v -> if neg.(v) then Weight.neg_inf else d.(v)
 end
 
 (* sample code *)
 
-module Int = struct
-  type t = int
-  let zero = 0
-  let ( + ) = ( + )
-  let compare = compare
-end
-
-module G = WeightedDirectedGraph (Int) (struct
+module G = WeightedDirectedGraph (struct
   type t = float
   let zero = 0.
+  let inf = infinity
+  let neg_inf = neg_infinity
   let ( + ) = ( +. )
   let compare = compare
 end)
 
-let d = G.raw_bellman_ford 8
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.) ] 1;;
+let d = G.bellman_ford 8 { G.fold = fun f -> List.fold_right f
+  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.) ] } 1;;
 List.init 8 d;;
 
-let d = G.raw_bellman_ford 8
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.) ] 1;;
+let d = G.bellman_ford 8 { G.fold = fun f -> List.fold_right f
+  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.) ] } 1;;
 List.init 8 d;;
 
-let d = G.raw_bellman_ford 8
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.); (4, 7, 1.) ] 1;;
+let d = G.bellman_ford 8 { G.fold = fun f -> List.fold_right f
+  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.); (4, 7, 1.) ] } 1;;
 List.init 8 d;;
-
-let d = G.bellman_ford
-  (List.map (fun (u, v, c) -> (u * 10, v * 10, c))
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.) ]) 10;;
-List.init 8 (fun v -> d @@ v * 10);;
-
-let d = G.bellman_ford
-  (List.map (fun (u, v, c) -> (u * 10, v * 10, c))
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.) ]) 10;;
-List.init 8 (fun v -> d @@ v * 10);;
-
-let d = G.bellman_ford
-  (List.map (fun (u, v, c) -> (u * 10, v * 10, c))
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.); (4, 7, 1.) ]) 1;;
-List.init 8 (fun v -> d @@ v * 10);;
