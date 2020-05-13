@@ -58,16 +58,17 @@ struct
   let raw_warshall_floyd n d =
     for i = 0 to n - 1 do
       for j = 0 to n - 1 do
-        for k = 0 to n - 1 do
-          let open Weight in
-          if 
-            (* 経路がない場合は更新しない *)
-            0 < Weight.compare inf d.(j).(i)
-            && 0 < Weight.compare inf d.(i).(k)
-            (* d.(j).(i) + d.(i).(k) < d.(j).(k) *)
-            && 0 < Weight.compare d.(j).(k) (d.(j).(i) + d.(i).(k))
-          then d.(j).(k) <- d.(j).(i) + d.(i).(k)
-        done
+        (* 経路がない場合は更新しない *)
+        if 0 < Weight.compare Weight.inf d.(j).(i) then
+          for k = 0 to n - 1 do
+            let open Weight in
+            if 
+              (* 経路がない場合は更新しない *)
+              0 < Weight.compare Weight.inf d.(i).(k)
+              (* d.(j).(i) + d.(i).(k) < d.(j).(k) *)
+              && 0 < Weight.compare d.(j).(k) (d.(j).(i) + d.(i).(k))
+            then d.(j).(k) <- d.(j).(i) + d.(i).(k)
+          done
       done
     done;
     for i = 0 to n - 1 do
