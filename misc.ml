@@ -3,12 +3,6 @@ let rec foldn f init = function
   | 0 -> init
   | n -> foldn f (f init) (n - 1)
 
-let rec gcd n m =
-  if m = 0 then n
-  else gcd m (n mod m)
-
-let lcm n m = n / gcd n m * m
-
 let rec take n = function
   | [] -> []
   | x :: xs ->
@@ -48,25 +42,3 @@ let call_cc f =
   let return = ref (fun () -> raise Not_found) in
   try f (fun x -> (return := fun () -> x); raise Exodus)
   with Exodus -> !return ()
-
-let rec factorize acc i n =
-  if n <= 1 then acc
-  else if n < i * i then n :: acc
-  else if n mod i = 0 then factorize (i :: acc) i (n / i)
-  else factorize acc (i + 1) n
-let factorize n =
-  match factorize [] 2 n with
-  | [] -> []
-  | p :: ps ->
-      let (acc, p, n) = List.fold_left (fun (acc, p, n) q ->
-        if p = q
-        then (acc, p, n + 1)
-        else ((p, n) :: acc, q, 1)) ([], p, 1) ps in
-      (p, n) :: acc
-
-let rec divisors (acc, acc') i n =
-  match compare n (i * i) with
-  | -1 -> List.rev_append acc acc'
-  | 0  -> List.rev_append acc (i :: acc')
-  | 1  -> divisors (if 0 < n mod i then (acc, acc') else (i :: acc, n / i :: acc')) (i + 1) n
-let divisors = divisors ([], []) 1
