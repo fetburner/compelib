@@ -118,24 +118,23 @@ end
     type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
 
     let bfs d es s =
-      let q = Queue.create () in
-      Queue.push s q;
       VHash.update d s P.nil;
+      let q = ref [s] in
       let rec bfs_aux t =
-        match VHash.find_opt d t with
+        match VHash.find_opt d t, !q with
+        (* もう既に全ての頂点までの経路が分かっている *)
+        | None, [] -> None
         (* 既に終点までの経路が分かっているので返す *)
-        | Some _ as ans -> ans
-        | None ->
-            match Queue.take q with
-            (* もう既に全ての頂点までの経路が分かっている *)
-            | exception Queue.Empty -> None
-            (* 終点までの経路が分かっていないので，BFSを続行 *)
-            | u ->
-                let Some p = VHash.find_opt d u in
-                (es u).fold (fun (v, e) () ->
-                  if Option.is_none (VHash.find_opt d v) then
-                    (Queue.push v q; VHash.update d v (P.snoc p e))) ();
-                bfs_aux t in
+        | Some _ as ans, _ -> ans
+        (* 終点までの経路が分かっていないので，BFSを続行 *)
+        | None, _ :: _ ->
+            q := List.fold_left (fun acc u ->
+              let Some p = VHash.find_opt d u in
+              Fun.flip (es u).fold acc @@ fun (v, e) q ->
+                match VHash.find_opt d v with
+                | Some _ -> q
+                | None -> VHash.update d v (P.snoc p e); v :: q) [] !q;
+            bfs_aux t in
       bfs_aux
   end
 
