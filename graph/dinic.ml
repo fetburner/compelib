@@ -50,28 +50,25 @@ struct
     let iter = Array.make n [] in
     (* 増加パスをDFSで探し，流せるだけ流していく *)
     let rec dfs level v f =
-      if v = t
-      then f
-      else begin
-        let rec find () =
-          match iter.(v) with
-          | [] -> Flow.zero
-          | e :: rest ->
-              iter.(v) <- rest;
-              let d =
-                if Flow.compare e.capacity Flow.zero <= 0 || level e.to_ <= level v
-                then Flow.zero
-                else dfs level e.to_ @@
-                       if Flow.compare f e.capacity <= 0 then f else e.capacity in
-              if Flow.compare d Flow.zero <= 0
-              then find ()
-              else begin
-                let open Flow in
-                e.capacity <- e.capacity - d;
-                e.rev.capacity <- e.rev.capacity + d; d
-              end in
-        find ()
-      end in
+      if v = t then f else
+      let rec find () =
+        match iter.(v) with
+        | [] -> Flow.zero
+        | e :: rest ->
+            iter.(v) <- rest;
+            let d =
+              if Flow.compare e.capacity Flow.zero <= 0 || level e.to_ <= level v
+              then Flow.zero
+              else dfs level e.to_ @@
+                     if Flow.compare f e.capacity <= 0 then f else e.capacity in
+            if Flow.compare d Flow.zero <= 0
+            then find ()
+            else begin
+              let open Flow in
+              e.capacity <- e.capacity - d;
+              e.rev.capacity <- e.rev.capacity + d; d
+            end in
+      find () in
 
     let rec outer flow =
       let level = G.bfs n (fun v ->
