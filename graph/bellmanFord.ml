@@ -47,7 +47,7 @@ struct
     (* 各辺の処理 *)
     let f (u, v, c) =
       let open Weight in
-      if neg.(u) then neg.(v) <- true;
+      if neg.(u) then (neg.(v) <- true; is_modified := true);
       if
         (* 原点から到達できない頂点は更新しない *)
         0 < Weight.compare inf d.(u)
