@@ -1,21 +1,25 @@
-let rec select acc trace = function
-  | [] -> acc
-  | x :: xs -> select ((trace, x, xs) :: acc) (x :: trace) xs
-let select xs = select [] [] xs
+type 'a mutable_list = Nil | Cons of 'a * 'a mutable_list ref
 
-let rec perm n xs =
-  match n, xs with
-  | 0, _ -> [[]]
-  | _, [] -> []
-  | n, xs ->
-      List.concat @@
-      List.map (fun (xs, x, ys) ->
-        List.map (List.cons x) @@
-        perm (n - 1) @@
-        List.rev_append xs ys) @@
-      select xs
 (* 与えられたリストからn要素を選ぶ順列を列挙 *)
-let perm : int -> 'a list -> 'a list list = fun n xs -> perm n @@ List.rev xs
+let perm : int -> 'a list -> 'a list list = fun n xs ->
+  let head = ref Nil in
+  (* xsを変更可能なリストに変換 *)
+  ignore (List.fold_left (fun tail x ->
+    let tail' = ref Nil in
+    tail := Cons (x, tail'); tail') head xs);
+  let rec perm_aux ys n ptr acc =
+    if n <= 0
+    then ys :: acc
+    else match !ptr with
+         | Nil -> acc
+         | (Cons (x, next)) as here ->
+             let acc = perm_aux ys n next acc in
+             ptr := !next; (* リストからconsセルhereを削除 *)
+             (* consセルを削除したリストから，n-1要素を選ぶ *)
+             let acc = perm_aux (x :: ys) (n - 1) head acc in
+             ptr := here; (* consセルを戻す *)
+             acc in
+  perm_aux [] n head []
 
 let rec comb acc xs n ys =
   match n, ys with
@@ -23,8 +27,7 @@ let rec comb acc xs n ys =
   | _, [] -> acc
   | n, y :: ys -> comb (comb acc xs n ys) (y :: xs) (n - 1) ys
 (* 与えられたリストからn要素を選ぶ組み合わせを列挙 *)
-let comb : int -> 'a list -> 'a list list = fun n xs ->
-  List.rev @@ comb [] [] n @@ List.rev xs
+let comb : int -> 'a list -> 'a list list = fun n -> comb [] [] n
 
 let rec repcomb acc xs n ys =
   match n, ys with
@@ -32,8 +35,7 @@ let rec repcomb acc xs n ys =
   | _, [] -> acc
   | n, y :: ys' -> repcomb (repcomb acc xs n ys') (y :: xs) (n - 1) ys
 (* 与えられたリストから重複を許してn要素を選ぶ組み合わせを列挙 *)
-let repcomb : int -> 'a list -> 'a list list = fun n xs ->
-  List.rev @@ repcomb [] [] n @@ List.rev xs;;
+let repcomb : int -> 'a list -> 'a list list = fun n -> repcomb [] [] n;;
 
 (* sample code *)
 perm 2 [1; 2; 3; 4];;
