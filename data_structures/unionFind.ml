@@ -1,47 +1,53 @@
 (* 素集合データ構造 *)
-module UnionFind : sig
-  type t
+module UnionFind = struct
+  module Make (Set : sig
+    type t
+    val union : t -> t -> t
+  end) : sig
+    type t
+    (* 与えられた集合から素集合データ構造を作る *)
+    val make : Set.t -> t
+    (* 与えられた素集合同士が同一かどうか判定する *)
+    val equal : t -> t -> bool
+    (* 与えられた素集合同士を合併する *)
+    val unite : t -> t -> unit
+    (* 与えられた素集合に属する要素を列挙する *)
+    val elements : t -> Set.t
+  end = struct
+    type t = node ref
+    and node =
+      | Root of int * Set.t (* 木の高さと要素の集合の二つ組 *)
+      | Link of t
 
-  (* 1要素だけを含む集合を作る *)
-  val make : unit -> t
-  (* 与えられた集合同士が同一かどうか判定する *)
-  val equal : t -> t -> bool
-  (* 与えられた集合同士を合併する *)
-  val unite : t -> t -> unit
-  (* 与えられた集合に属する要素の数を求める *)
-  val cardinal : t -> int
-end = struct
-  (* type t = node ref
-     and node = Root int | Link t
-     みたいなのがやりたくて，OCamlの実行時表現はintとそれ以外を区別できるので
-     省メモリのためにこうしている *)
-  type t = Obj.t ref
+    let make s = ref @@ Root (0, s)
 
-  let make () = ref (Obj.repr 1)
+    let rec find uf =
+      match !uf with
+      | Root _ -> uf
+      | Link parent ->
+          let root = find parent in
+          uf := Link root; root
 
-  let rec find uf =
-    if Obj.is_int !uf
-    then uf
-    else begin
-      let root = find (Obj.magic !uf) in
-      uf := Obj.repr root; root
-    end
+    let equal uf uf' = find uf == find uf'
 
-  let equal uf uf' = find uf == find uf'
+    let unite uf uf' =
+      let root = find uf in
+      let root' = find uf' in
+      if root != root' then begin
+        let Root (rank, elts) = !root in
+        let Root (rank', elts') = !root' in
+        let root, root' =
+          if rank <= rank'
+          then root, root'
+          else root', root in
+        root := Link root';
+        root' := Root (rank' + (if rank = rank' then 1 else 0), Set.union elts elts')
+      end
 
-  let unite uf uf' =
-    let root = find uf in
-    let root' = find uf' in
-    if root != root' then begin
-      let card : int = Obj.magic !root in
-      let card' : int = Obj.magic !root' in
-      let root, root' =
-        if card <= card'
-        then root, root'
-        else root', root in
-      root := Obj.repr (card + card');
-      root' := Obj.repr root
-    end
-
-  let cardinal uf = Obj.magic @@ ( ! ) @@ find uf
+    let elements uf =
+      match find uf with
+      | { contents = Root (_, elts) } -> elts
+  end
 end
+
+
