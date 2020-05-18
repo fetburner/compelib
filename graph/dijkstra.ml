@@ -14,15 +14,20 @@ module WeightedDirectedGraph
         val ( + ) : t -> t -> t
         val compare : t -> t -> int
       end)
-      (* 道の表現 *)
+      (* 道の集合の表現 *)
       (Path : sig
         type t
         (* 辺の名前 *)
         type edge
-        (* 長さ0の道 *)
+        (* 長さ0の道だけのsingleton *)
         val nil : t
-        (* 道の後ろに辺を付け足した道 *)
+        (* 空集合 *)
+        val empty : t
+        (* 与えられた集合に属する道について，それぞれ末尾に辺を付け足した集合 *)
         val snoc : t -> edge -> t
+        (* 道の集合のunion
+           最短経路は一つだけ分かればよい場合はFun.constを与えるとよい *)
+        val union : t -> t -> t
       end) ->
         sig
           type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
@@ -36,8 +41,8 @@ module WeightedDirectedGraph
           (int -> (int * Weight.t * Path.edge) church_list) ->
           (* 始点 *)
           int ->
-          (* 始点からの最短距離と，その経路を返す関数
-             始点から辿り着けなければ(inf, Path.nil)を返す
+          (* 始点からの最短距離と，その経路の集合を返す関数
+             始点から辿り着けなければ(inf, Path.empty)を返す
              この関数を覚えておけば，呼び出しごとの途中までの計算結果がシェアされる *)
           (int -> Weight.t * Path.t)
 
@@ -50,8 +55,8 @@ module WeightedDirectedGraph
           (int -> (int * Weight.t * Path.edge) church_list) ->
           (* 始点 *)
           int ->
-          (* 始点からの最短距離と，その経路を返す関数
-             始点から辿り着けなければ(inf, Path.nil)を返す
+          (* 始点からの最短距離と，その経路の集合を返す関数
+             始点から辿り着けなければ(inf, Path.empty)を返す
              この関数を覚えておけば，呼び出しごとの途中までの計算結果がシェアされる *)
           (int -> Weight.t * Path.t)
       end
@@ -73,15 +78,18 @@ module WeightedDirectedGraph
         val ( + ) : t -> t -> t
         val compare : t -> t -> int
       end)
-      (* 道の表現 *)
+      (* 道の集合の表現 *)
       (Path : sig
         type t
         (* 辺の名前 *)
         type edge
-        (* 長さ0の道 *)
+        (* 長さ0の道だけのsingleton *)
         val nil : t
-        (* 道の後ろに辺を付け足した道 *)
+        (* 与えられた集合に属する道について，それぞれ末尾に辺を付け足した集合 *)
         val snoc : t -> edge -> t
+        (* 道の集合のunion
+           最短経路は一つだけ分かればよい場合はFun.constを与えるとよい *)
+        val union : t -> t -> t
       end) ->
       sig
         type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
@@ -115,15 +123,18 @@ module WeightedDirectedGraph
         val ( + ) : t -> t -> t
         val compare : t -> t -> int
       end)
-      (* 道の表現 *)
+      (* 道の集合の表現 *)
       (Path : sig
         type t
         (* 辺の名前 *)
         type edge
-        (* 長さ0の道 *)
+        (* 長さ0の道だけのsingleton *)
         val nil : t
-        (* 道の後ろに辺を付け足した道 *)
+        (* 与えられた集合に属する道について，それぞれ末尾に辺を付け足した集合 *)
         val snoc : t -> edge -> t
+        (* 道の集合のunion
+           最短経路は一つだけ分かればよい場合はFun.constを与えるとよい *)
+        val union : t -> t -> t
       end) ->
       sig
         type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
@@ -133,7 +144,7 @@ module WeightedDirectedGraph
         (Vertex.t -> (Vertex.t * Weight.t * Path.edge) church_list) ->
         (* 始点 *)
         Vertex.t ->
-        (* 始点からの最短距離と，その経路を返す関数
+        (* 始点からの最短距離と，その経路の集合を返す関数
            始点から辿り着けなければNot_foundを投げる
            この関数を覚えておけば，呼び出しごとの途中までの計算結果がシェアされる *)
         (Vertex.t -> Weight.t * Path.t)
@@ -153,6 +164,7 @@ end
     type edge
     val nil : t
     val snoc : t -> edge -> t
+    val union : t -> t -> t
   end
 
   (* 最短距離を格納するデータ構造を抽象化したダイクストラ法の実装 *)
@@ -191,22 +203,25 @@ end
                 Fun.flip List.iter us (fun u ->
                   match VArray.find d u with
                   | (d, _) when 0 < W.compare w d -> ()
-                  | (_, p) ->
+                  | (_, pu) ->
                       (* 未だ頂点uを訪れていない *)
                       Fun.flip (es u).fold () @@ fun (v, c, e) () ->
-                        let open W in
+                        let dv' = let open W in w + c in
                         match VArray.find d v with
-                        | (d, _) when W.compare d (w + c) <= 0 -> ()
+                        | (dv, _) when W.compare dv dv' < 0 -> ()
+                        | (dv, pv) when W.compare dv dv' = 0 ->
+                            let pv' = P.union pv (P.snoc pu e) in
+                            if pv != pv' then VArray.update d v (dv, pv')
                         | _ | exception Not_found ->
-                            VArray.update d v (w + c, P.snoc p e);
-                            q := WMap.update (w + c) (fun vs -> Some (v :: Option.value ~default:[] vs)) !q);
+                            VArray.update d v (dv', P.snoc pu e);
+                            q := WMap.update dv' (fun vs -> Some (v :: Option.value ~default:[] vs)) !q);
                 min_binding_opt := WMap.min_binding_opt !q;
                 dijkstra_aux t in
       dijkstra_aux
   end
 
   module ByArray = struct
-    module Make (W : sig include Weight val inf : t end) (P : Path) = struct
+    module Make (W : sig include Weight val inf : t end) (P : sig include Path val empty : t end) = struct
       module C = Core (W) (P) (struct
         type t = (W.t * P.t) array
         type vertex = int
@@ -215,11 +230,12 @@ end
       end)
       include C
 
-      let dijkstra n e s = C.dijkstra (Array.make n (W.inf, P.nil)) e s
+      let dijkstra n e s = C.dijkstra (Array.make n (W.inf, P.empty)) e s
 
       let dijkstra_dense n es s =
         let d = Array.make n W.inf in
-        let r = Array.make n P.nil in
+        let r = Array.make n P.empty in
+        r.(s) <- P.nil;
         d.(s) <- W.zero;
         let rec dijkstra_dense_aux = function
           | [] -> ()
@@ -229,9 +245,11 @@ end
                 then (u, v :: us)
                 else (v, u :: us)) (v, []) vs in
               (es u).fold (fun (v, c, e) () ->
-                let open W in
-                if 0 < W.compare d.(v) (d.(u) + c) then
-                  (d.(v) <- d.(u) + c; r.(v) <- P.snoc r.(u) e)) ();
+                let dv' = let open W in d.(u) + c in
+                match W.compare d.(v) dv' with
+                | -1 -> ()
+                | 0 -> r.(v) <- P.union r.(v) (P.snoc r.(u) e)
+                | 1 -> d.(v) <- dv'; r.(v) <- P.snoc r.(u) e) ();
               dijkstra_dense_aux us in
         dijkstra_dense_aux (List.init n Fun.id);
         fun v -> (d.(v), r.(v))
@@ -273,12 +291,11 @@ module IntWeightedDirectedGraphByArray = struct
   module Make 
     (Path : sig
       type t
-      (* 辺の名前 *)
       type edge
-      (* 長さ0の道 *)
       val nil : t
-      (* 道の後ろに辺を付け足した道 *)
+      val empty : t
       val snoc : t -> edge -> t
+      val union : t -> t -> t
     end)
   = struct
     include (WeightedDirectedGraph.ByArray.Make (struct
@@ -339,14 +356,16 @@ module IntWeightedDirectedGraphByArray = struct
             if !w <= d.(u) then
               (* 未だ頂点uを訪れていない *)
               (es u).fold (fun (v, c, e) () ->
-                if !w + c < d.(v) then begin
-                  d.(v) <- !w + c; (* 頂点vの重さを緩和 *)
-                  r.(v) <- Path.snoc r.(u) e;
-                  (* ヒープにvを追加する *)
-                  let j = !i + c - if !i + c <= mw then 0 else mw + 1 in
-                  q.(j) <- v :: q.(j);
-                  incr m
-                end) ();
+                match compare d.(v) (!w + c) with
+                | -1 -> ()
+                | 0 -> r.(v) <- Path.union r.(v) (Path.snoc r.(u) e);
+                | 1 ->
+                    d.(v) <- !w + c; (* 頂点vの重さを緩和 *)
+                    r.(v) <- Path.snoc r.(u) e;
+                    (* ヒープにvを追加する *)
+                    let j = !i + c - if !i + c <= mw then 0 else mw + 1 in
+                    q.(j) <- v :: q.(j);
+                    incr m) ();
             dijkstra_aux t in
       dijkstra_aux
   end
@@ -367,6 +386,8 @@ module G = IntWeightedDirectedGraphByArray.Make
     type t = string list
     type edge = string
     let nil = []
+    let empty = []
+    let union = Fun.const
     let snoc = Fun.flip List.cons
   end)
 
@@ -390,11 +411,40 @@ List.init 6 @@ Fun.flip (G.dijkstra_special 6 16) 0 @@ fun u ->
   { G.fold = fun f ->
     List.fold_right (fun (v, w) -> f (v, w, Printf.sprintf "%d->%d" u v)) e.(u) };;
 
+(* 最短経路の数を数える *)
+module G = IntWeightedDirectedGraphByArray.Make
+  (struct
+    type t = int
+    type edge = unit
+    let nil = 1
+    let empty = 0
+    let union = ( + )
+    let snoc = Fun.const
+  end);;
+
+let e =
+  [|[ (1, 1); (2, 2); (3, 3) ];
+    [ (4, 3) ];
+    [ (4, 2) ];
+    [ (4, 1) ]; []|];;
+
+List.init 5 @@ Fun.flip (G.dijkstra 5) 0 @@ fun u ->
+  { G.fold = fun f ->
+    List.fold_right (fun (v, w) -> f (v, w, ())) e.(u) };;
+
+List.init 5 @@ Fun.flip (G.dijkstra_dense 5) 0 @@ fun u ->
+  { G.fold = fun f ->
+    List.fold_right (fun (v, w) -> f (v, w, ())) e.(u) };;
+
+List.init 5 @@ Fun.flip (G.dijkstra_special 5 3) 0 @@ fun u ->
+  { G.fold = fun f ->
+    List.fold_right (fun (v, w) -> f (v, w, ())) e.(u) };;
+
 (* 無限グラフ!!! *)
 module IntPair = struct
   type t = int * int
   let compare = compare
-  end
+end
 
 module G = WeightedDirectedGraph.ByMap.Make (IntPair) (struct
   type t = int
@@ -409,6 +459,7 @@ end)
   type edge = unit
   let nil = ()
   let snoc _ _ = ()
+  let union = Fun.const
 end)
 
 let d = Fun.flip G.dijkstra (0, 0) @@ fun (x, y) ->
