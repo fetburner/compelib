@@ -26,17 +26,20 @@ sig
     (int * int * Weight.t) church_list
 end =
 struct
+  module UF = UnionFind.Make (struct
+    type t = unit
+    let union _ _ = ()
+  end)
+
   type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
 
   let kruskal n es =
     { fold = fun f init ->
-      let uf = UnionFind.make n in
+      let uf = Array.init n @@ fun _ -> UF.make () in
       List.fold_left (fun acc (u, v, w) ->
-        let c = UnionFind.find uf u in
-        let d = UnionFind.find uf v in
-        if UnionFind.Class.compare c d = 0
+        if UF.equal uf.(u) uf.(v)
         then acc
-        else (UnionFind.unite uf c d; f (u, v, w) acc)) init @@
+        else (UF.unite uf.(u) uf.(v); f (u, v, w) acc)) init @@
       List.sort (fun (_, _, w) (_, _, w') -> Weight.compare w w') es }
 end
 
