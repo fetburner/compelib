@@ -27,11 +27,12 @@ sig
     (int * int * Flow.t) church_list
 end =
 struct
-  module G = DirectedGraph.ByArray.Make (struct
-    type t = int
-    type edge = unit
-    let nil = 0
-    let snoc t _ = t + 1
+  module G = DirectedGraph (struct
+    type t = int array
+    type key = int
+    type elt = int
+    let get = Array.get
+    let set = Array.set
   end)
 
   type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
@@ -70,23 +71,22 @@ struct
             end in
       find () in
 
+    let a = Array.make n max_int in
     let rec outer flow =
-      let level = G.bfs n (fun v ->
-        { G.fold = fun f acc ->
-          List.fold_left (fun acc e ->
-            if Flow.compare e.capacity Flow.zero <= 0
-            then acc
-            else f (e.to_, ()) acc) acc adj.(v) }) s in
-      match level t with
-      | None -> flow
-      | Some _ ->
-          let rec inner flow =
-            let f = dfs level s Flow.inf in
-            if Flow.compare f Flow.zero <= 0
-            then flow
-            else let open Flow in inner (flow + f) in
-          Array.iteri (Array.set iter) adj;
-          outer (inner flow) in
+      Array.fill a 0 n max_int;
+      let level = G.shortest_path a (fun v f ->
+        List.iter (fun e ->
+          if 0 < Flow.compare e.capacity Flow.zero then f e.to_) adj.(v)) s in
+      if max_int <= level t
+      then flow
+      else
+        let rec inner flow =
+          let f = dfs level s Flow.inf in
+          if Flow.compare f Flow.zero <= 0
+          then flow
+          else let open Flow in inner (flow + f) in
+        Array.iteri (Array.set iter) adj;
+        outer (inner flow) in
 
     (outer Flow.zero, { fold = fun f ->
       Array.fold_right
