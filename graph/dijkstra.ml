@@ -37,16 +37,14 @@ module WeightedDirectedGraph
   val shortest_path :
     (* 空なヒープ *)
     Heap.t ->
-    (* 全ての頂点についての経路長が無限大で初期化された配列
-       Array.getした時に極端に大きな経路長が返ってくる実装でも良いし，
-       Not_foundが投げられる実装でも良い *)
+    (* 全ての頂点についての経路長が無限大で初期化された配列 *)
     Array.t ->
     (* 最短経路を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ *)
     (vertex -> (vertex -> (weight -> weight) (* 辺を通った際のコストを加算する関数 *) -> unit) -> unit) ->
     (* 始点 *)
     vertex ->
     (* 終点を受け取って，始点からの最短距離を返す関数
-       始点から辿り着けない場合，無限大を返すかNot_foundを投げる（Arrayの実装依存）
+       始点から辿り着けない場合，無限大を返す
        この関数を覚えておけば，呼び出しごとの途中までの計算結果がシェアされる *)
     (vertex -> weight)
 end
@@ -69,7 +67,7 @@ end
           (* 既に終点までの距離が分かっているので返す *)
           | x when 0 <= Weight.compare w x -> x
           (* 終点までの距離が分かっていないので，ダイクストラ法を続行 *)
-          | _ | exception Not_found ->
+          | _ ->
               List.iter (fun u ->
                 (* 未だ頂点uを訪れていない *)
                 if 0 <= Weight.compare (Array.get d u) w then
@@ -124,6 +122,40 @@ let e =
 
 Array.init 7 @@ Fun.flip (G.shortest_path (ref FloatMap.empty) (Array.make 7 infinity)) 0 @@ fun u f ->
   Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( +. ) @@ float_of_int c;;
+
+(* 経路長をMapに保存する *)
+module IntMap = Map.Make (struct
+  type t = int
+  let compare = compare
+end)
+
+module G = WeightedDirectedGraph (Float)
+  (struct
+    type t = int list FloatMap.t ref
+    type elt = int
+    type key = float
+    let take_min_bindings q =
+      match FloatMap.min_binding !q with
+      | exception Not_found -> None
+      | (w, _) as p -> q := FloatMap.remove w !q; Some p
+    let add q w v  =
+      q := FloatMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
+  end)
+  (struct
+    type t = float IntMap.t ref
+    type key = int
+    type elt = float
+    let get m k = try IntMap.find k !m with Not_found -> infinity
+    let set m k x = m := IntMap.add k x !m
+  end);;
+
+Array.init 10 @@
+  Fun.flip (G.shortest_path (ref FloatMap.empty) (ref IntMap.empty)) 0 @@ fun u f ->
+    Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( +. ) @@ float_of_int c;;
+
+(* 無限グラフも可 *)
+Array.init 10 @@
+Fun.flip (G.shortest_path (ref FloatMap.empty) (ref IntMap.empty)) 0 @@ fun u f -> f (u + 1) @@ ( +. ) 1.;;
 
 (* 経路復元する *)
 
