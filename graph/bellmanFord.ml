@@ -31,7 +31,7 @@ struct
     (* 距離を覚えるやつ *)
     let d = Array.make n Weight.inf in
     (* 自己辺の最小のコスト *)
-    let self = Array.make n Weight.inf in
+    let self = Array.make n Weight.zero in
     (* 始点より終点のインデックスが大きくなる辺を集めた隣接リスト *)
     let inc = Array.make n [] in
     (* 始点より終点のインデックスが小さくなる辺を集めた隣接リスト *)
@@ -43,7 +43,7 @@ struct
       | _ -> dec.(u) <- e :: dec.(u)) ();
     (* 自己辺は最初に緩和する必要がある *)
     Array.iteri (fun v c ->
-      if 0 < Weight.compare Weight.inf c then
+      if 0 < Weight.compare Weight.zero c then
         inc.(v) <- (v, v, c) :: inc.(v)) self;
     d.(s) <- Weight.zero;
     (* 残りの反復回数 *)
