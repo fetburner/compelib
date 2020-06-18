@@ -1,3 +1,4 @@
+
 module WeightedDirectedGraph
   (Weight : sig
     type t
@@ -29,16 +30,21 @@ struct
   let bellman_ford n es s =
     (* 距離を覚えるやつ *)
     let d = Array.make n Weight.inf in
-    (* 経路に負閉路が含まれる頂点を覚えるやつ *)
-    let neg = Array.make n false in
+    (* 自己辺の最小のコスト *)
+    let self = Array.make n Weight.inf in
     (* 始点より終点のインデックスが大きくなる辺を集めた隣接リスト *)
     let inc = Array.make n [] in
     (* 始点より終点のインデックスが小さくなる辺を集めた隣接リスト *)
     let dec = Array.make n [] in
     es.fold (fun ((u, v, c) as e) () ->
-      if u <= v
-      then inc.(u) <- e :: inc.(u)
-      else dec.(u) <- e :: dec.(u)) ();
+      match compare v u with
+      | 0 -> if 0 < Weight.compare self.(u) c then self.(u) <- c
+      | cmp when 0 < cmp -> inc.(u) <- e :: inc.(u)
+      | _ -> dec.(u) <- e :: dec.(u)) ();
+    (* 自己辺は最初に緩和する必要がある *)
+    Array.iteri (fun v c ->
+      if 0 < Weight.compare Weight.inf c then
+        inc.(v) <- (v, v, c) :: inc.(v)) self;
     d.(s) <- Weight.zero;
     (* 残りの反復回数 *)
     let i = ref n in
@@ -47,18 +53,11 @@ struct
     (* 各辺の処理 *)
     let f (u, v, c) =
       let open Weight in
-      if neg.(u) && not neg.(v) then (neg.(v) <- true; is_modified := true);
-      if
-        (* 原点から到達できない頂点は更新しない *)
-        0 < Weight.compare inf d.(u)
-        (* c は u から v への辺の重さ
-           d.(u) + c < d.(v) *)
-        && 0 < Weight.compare d.(v) (d.(u) + c)
-      then begin
-        d.(v) <- d.(u) + c;
-        is_modified := true;
-        if !i <= succ n lsr 1 then neg.(v) <- true
-      end in
+      (* 原点から到達できない頂点は更新しない *)
+      if 0 < Weight.compare inf d.(u) then
+        let dv = if 0 <= Weight.compare neg_inf d.(u) then neg_inf else d.(u) + c in
+        if 0 < Weight.compare d.(v) dv then
+          (is_modified := true; d.(v) <- if !i <= succ n lsr 1 then neg_inf else dv) in
     while 0 < !i && !is_modified do
       is_modified := false;
       (* インデックスが増加する辺の処理 *)
@@ -71,7 +70,7 @@ struct
       done;
       decr i
     done;
-    fun v -> if neg.(v) then Weight.neg_inf else d.(v)
+    Array.get d
 end
 
 (* sample code *)
