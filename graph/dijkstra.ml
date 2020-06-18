@@ -11,9 +11,9 @@ module WeightedDirectedGraph
     type elt (* 頂点に相当 *)
     type key = Weight.t (* 経路長に相当 *)
     (* ヒープが空ならNoneを，
-       そうでなければ経路長が最小となるbindingを一つ以上返す
-       返したbindingは全てヒープから削除される *)
-    val take_min_bindings : t -> (key * elt list) option
+       そうでなければ経路長が最小となるbindingを返す
+       返したbindingはヒープから削除される *)
+    val take_min_binding : t -> (key * elt) option
     (* ヒープにbindingを追加する
        既に同じ頂点についてのbindingが追加されていたら，
        経路長の短い方だけを残しても良いし，何も考えずに追加してもよい．
@@ -57,26 +57,25 @@ end
     Array.set d s Weight.zero;
     (* 既に最短距離が確定した辺へのクエリを高速化するため，
        ヒープの最小要素をメモしておく *)
-    let min_bindings = ref (Some (Weight.zero, [s])) in
+    let min_binding = ref (Some (Weight.zero, s)) in
     let rec dijkstra t =
-      match !min_bindings with
+      match !min_binding with
       (* もう既に全ての頂点までの距離が分かっている *)
       | None -> Array.get d t
-      | Some (w, us) ->
+      | Some (w, u) ->
           match Array.get d t with
           (* 既に終点までの距離が分かっているので返す *)
           | x when 0 <= Weight.compare w x -> x
           (* 終点までの距離が分かっていないので，ダイクストラ法を続行 *)
           | _ ->
-              List.iter (fun u ->
-                (* 未だ頂点uを訪れていない *)
-                if 0 <= Weight.compare (Array.get d u) w then
-                  es u @@ fun v f ->
-                    (* uからvに伸びる辺を通った際の経路長 *)
-                    let c = f w in
-                    if 0 < Weight.compare (Array.get d v) c then
-                      (Heap.add q c v; Array.set d v c)) us;
-              min_bindings := Heap.take_min_bindings q;
+              (* 未だ頂点uを訪れていない *)
+              if 0 <= Weight.compare (Array.get d u) w then
+                es u (fun v f ->
+                  (* uからvに伸びる辺を通った際の経路長 *)
+                  let c = f w in
+                  if 0 < Weight.compare (Array.get d v) c then
+                    (Heap.add q c v; Array.set d v c));
+              min_binding := Heap.take_min_binding q;
               dijkstra t in
     dijkstra
 end
@@ -97,10 +96,11 @@ module G = WeightedDirectedGraph (Float)
     type t = int list FloatMap.t ref
     type elt = int
     type key = float
-    let take_min_bindings q =
+    let take_min_binding q =
       match FloatMap.min_binding !q with
       | exception Not_found -> None
-      | (w, _) as p -> q := FloatMap.remove w !q; Some p
+      | (w, [v]) -> q := FloatMap.remove w !q; Some (w, v)
+      | (w, v :: vs) -> q := FloatMap.add w vs !q; Some (w, v)
     let add q w v  =
       q := FloatMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
@@ -134,10 +134,11 @@ module G = WeightedDirectedGraph (Float)
     type t = int list FloatMap.t ref
     type elt = int
     type key = float
-    let take_min_bindings q =
+    let take_min_binding q =
       match FloatMap.min_binding !q with
       | exception Not_found -> None
-      | (w, _) as p -> q := FloatMap.remove w !q; Some p
+      | (w, [v]) -> q := FloatMap.remove w !q; Some (w, v)
+      | (w, v :: vs) -> q := FloatMap.add w vs !q; Some (w, v)
     let add q w v  =
       q := FloatMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
@@ -175,10 +176,11 @@ module G = WeightedDirectedGraph (WeightedRoute)
     type t = int list WeightedRouteMap.t ref
     type elt = int
     type key = WeightedRoute.t
-    let take_min_bindings q =
+    let take_min_binding q =
       match WeightedRouteMap.min_binding !q with
       | exception Not_found -> None
-      | (w, _) as p -> q := WeightedRouteMap.remove w !q; Some p
+      | (w, [v]) -> q := WeightedRouteMap.remove w !q; Some (w, v)
+      | (w, v :: vs) -> q := WeightedRouteMap.add w vs !q; Some (w, v)
     let add q w v  =
       q := WeightedRouteMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
