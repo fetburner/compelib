@@ -3,7 +3,7 @@ module Weighted01DirectedGraph
   (Array : sig
     type t
     type key
-    type elt = int (* 重みのない（=全ての重さが0か1な）グラフなので経路長は非負整数 *)
+    type elt = int (* 全ての重さが0か1なグラフなので経路長は非負整数 *)
     val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
