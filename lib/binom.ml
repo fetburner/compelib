@@ -50,35 +50,4 @@ let binom_memo :
       a.(!i) <- div (mul a.(!i - 1) (of_int (n - !i + 1))) (of_int !i);
       binom_memo_aux k
     end in
-  fun k -> binom_memo_aux @@ min k @@ n - k;;
-
-(* sample *)
-
-(* その昔AtCoderのOCaml処理系のintが31ビットしか無かった頃，
-   よく答えがintの範囲に収まらなくてint64で計算をしたものだなぁ（しみじみ） *)
-let open Int64 in binom ~of_int ~mul ~div 4 2;;
-let open Int64 in binom ~of_int ~mul ~div 10 3;;
-let open Int64 in binom_memo ~of_int ~mul ~div 4 2;;
-let open Int64 in binom_memo ~of_int ~mul ~div 10 3;;
-
-(* クソデカ素数で割った余りを求めたいとき *)
-let rec power ( * ) e m n =
-  if n <= 0 then e
-  else power ( * ) (if n land 1 = 0 then e else m * e) (m * m) (n lsr 1)
-
-let m = 998244353
-let ( *^ ) x y = (x * y) mod m
-let ( /^ ) x y = power ( *^ ) x y (m - 2);; (* フェルマーの小定理 *)
-
-binom ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 4 2;;
-binom ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 10 3;;
-binom ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 100000 1000;;
-binom_memo ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 4 2;;
-binom_memo ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 10 3;;
-binom_memo ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 100000 1000;;
-
-(* 前者はO(n^2)だが，メモ化のお陰で後者はO(n)になる *)
-let a = Array.init 1001 (binom ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 1000)
-let a' = Array.init 1001 (binom_memo ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 1000);;
-(* もちろん計算結果は一致 *)
-List.for_all Fun.id @@ List.init 1001 @@ fun i -> a.(i) = a'.(i);;
+  fun k -> binom_memo_aux @@ min k @@ n - k
