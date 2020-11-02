@@ -1,0 +1,5 @@
+(library
+ (name compelib_test)
+ (inline_tests)
+ (libraries compelib)
+ (preprocess (pps ppx_inline_test)))

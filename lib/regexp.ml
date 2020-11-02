@@ -79,6 +79,7 @@ end = struct
     (List.fold_left (fun re -> re.derive) re s).is_nullable
 end
 
+(*
 let () =
   let s = read_line () in
   print_endline @@
@@ -95,3 +96,4 @@ let () =
       Array.to_list @@ Array.init (String.length s) (String.get s)
   then "YES"
   else "NO"
+*)
