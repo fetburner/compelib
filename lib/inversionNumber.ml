@@ -34,8 +34,10 @@ let sort_count :
     match n with
     | 0 -> k xs invs []
     | 1 ->
-        let Seq.Cons (x, xs) = xs () in
-        k xs invs [x]
+        begin match xs () with
+        | Seq.Cons (x, xs) -> k xs invs [x]
+        | _ -> raise (Invalid_argument "sort_count")
+        end
     | _ ->
         sort_count_rev invs ((n + 1) lsr 1) xs @@ fun xs invs ys ->
           sort_count_rev invs (n lsr 1) xs @@ fun xs invs zs ->
@@ -44,8 +46,10 @@ let sort_count :
     match n with
     | 0 -> k xs invs []
     | 1 ->
-        let Seq.Cons (x, xs) = xs () in
-        k xs invs [x]
+        begin match xs () with
+        | Seq.Cons (x, xs) -> k xs invs [x]
+        | _ -> raise (Invalid_argument "sort_count")
+        end
     | _ ->
         sort_count invs (n lsr 1) xs @@ fun xs invs ys ->
           sort_count invs ((n + 1) lsr 1) xs @@ fun xs invs zs ->
