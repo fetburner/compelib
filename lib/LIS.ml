@@ -8,6 +8,6 @@ module LIS (ESet : Set.S) = struct
 end
 
 (* example *)
-module IntLIS = LIS (Set.Make (struct type t = int let compare = compare end))
+module IntLIS = LIS (Set.Make (struct type t = int let compare = compare end));;
 
 IntLIS.lis [4; 1; 6; 2; 8; 5; 7; 3]

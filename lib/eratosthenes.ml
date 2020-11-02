@@ -36,7 +36,7 @@ let sieve :
     function
       | k when k <= 1 -> false
       | 2 -> true
-      | k -> k land 1 = 1 && sieve_aux k
+      | k -> k land 1 = 1 && sieve_aux k;;
 
 
 (* sample code *)
