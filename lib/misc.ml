@@ -20,6 +20,7 @@ let rec floor_sqrt acc acc_x_2_x_r sq_acc_minus_z r sq_r =
 let floor_sqrt z = floor_sqrt 0 0 (~-z) (1 lsl 30) (1 lsl 60)
 
 let rec fold_tournament dir f = function
+  | [] -> raise (Invalid_argument "fold_tournament")
   | [x] -> x
   | x :: xs ->
       fold_tournament (not dir) f @@
