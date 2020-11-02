@@ -30,9 +30,9 @@ fib' 49;;
 (* naive binary function *)
 let rec routes n m =
   if n = 0 || m = 0 then 1
-  else routes (n - 1) m + routes n (m - 1)
+  else routes (n - 1) m + routes n (m - 1);;
 (* val routes : int -> int -> int = <fun> *)
-List.init 5 (fun i -> List.init 5 (routes i))
+List.init 5 (fun i -> List.init 5 (routes i));;
 (* - : int list list =
 [[1; 1; 1; 1; 1]; [1; 2; 3; 4; 5]; [1; 3; 6; 10; 15]; [1; 4; 10; 20; 35];
  [1; 5; 15; 35; 70]] *)
