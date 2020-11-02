@@ -47,8 +47,8 @@ end = struct
 
   let rec union re1 re2 =
     match re1, re2 with
-    | { sort = EmptySet }, _ -> re2
-    | _, { sort = EmptySet } -> re1
+    | { sort = EmptySet; _ }, _ -> re2
+    | _, { sort = EmptySet; _ } -> re1
     | _, _ ->
         { sort = Other;
           is_nullable = re1.is_nullable || re2.is_nullable;
@@ -56,8 +56,8 @@ end = struct
 
   let rec app re1 re2 =
     match re1, re2 with
-    | { sort = EmptyStr }, _ -> re2
-    | { sort = EmptySet }, _ -> empty_set
+    | { sort = EmptyStr; _ }, _ -> re2
+    | { sort = EmptySet; _ }, _ -> empty_set
     | _, _ ->
         { sort = Other;
           is_nullable = re1.is_nullable && re2.is_nullable;
@@ -67,8 +67,8 @@ end = struct
               (if re1.is_nullable then re2.derive c else empty_set) }
 
   let star = function
-    | { sort = EmptySet }
-    | { sort = EmptyStr } -> empty_str
+    | { sort = EmptySet; _ }
+    | { sort = EmptyStr; _ } -> empty_str
     | re0 ->
         let rec re =
           { sort = Other;

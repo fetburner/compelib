@@ -39,5 +39,6 @@ let divisors : int -> int church_list = fun n ->
         match compare n (i * i) with
         | -1 -> List.fold_left (Fun.flip f) acc' acc
         | 0  -> List.fold_left (Fun.flip f) (f i acc') acc
-        | 1  -> (if 0 < n mod i then divisors acc acc' else divisors (i :: acc) (f (n / i) acc')) (i + 1) in
+        | 1  -> (if 0 < n mod i then divisors acc acc' else divisors (i :: acc) (f (n / i) acc')) (i + 1)
+        | _  -> raise Not_found in
       divisors [] acc 1 }
