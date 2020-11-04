@@ -8,7 +8,8 @@ let routes = Compelib.Memo.memoize 25 @@ fun routes (n, m) ->
   then 1
   else routes (n - 1, m) + routes (n, m - 1)
 
-let%test _ = 
+let%test _ =
+  List.init 5 (fun i -> List.init 5 (fun j -> routes (i, j))) =
   [[1; 1; 1; 1; 1];
    [1; 2; 3; 4; 5];
    [1; 3; 6; 10; 15];
