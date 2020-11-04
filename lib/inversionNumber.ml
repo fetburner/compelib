@@ -55,18 +55,3 @@ let sort_count :
           sort_count invs ((n + 1) lsr 1) xs @@ fun xs invs zs ->
             rev_merge_count ys (n lsr 1) zs invs [] @@ k xs in
   sort_count 0;;
-
-(* sample *)
-sort_count compare 7 (List.to_seq [3; 1; 4; 1; 5; 9; 2]) @@ fun _ invs xs -> invs, xs;;
-
-let measure f =
-  let start = Sys.time () in
-  f ();
-  Sys.time () -. start;;
-
-(* 標準ライブラリのList.sortよりちょっと遅い程度 *)
-let l = List.init 1000000 @@ fun _ -> Random.bits ();;
-
-sort_count compare 1000000 (List.to_seq l) @@ fun _ _ -> ( = ) @@ List.sort compare l;;
-measure @@ fun () -> ignore @@ List.sort compare l;;
-measure @@ fun () -> ignore @@ sort_count compare 1000000 (List.to_seq l) @@ fun _ _ _ -> ();;
