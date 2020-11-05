@@ -1,4 +1,4 @@
-module G = Compelib.Kruskal.WeightedGraph (struct
+module G = Compelib.Kruskal.F (struct
   type t = int
   let compare = compare
 end)

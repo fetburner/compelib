@@ -1,4 +1,4 @@
-module WeightedGraph
+module F
   (Weight : sig
     type t
     val compare : t -> t -> int
