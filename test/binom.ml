@@ -8,7 +8,7 @@ let%test "10C3 in int64 (memoized ver)" = let open Int64 in Compelib.Binom.binom
 (* クソデカ素数で割った余りを求めたいとき *)
 let m = 998244353
 let ( *^ ) x y = (x * y) mod m
-let ( /^ ) x y = Compelib.Power.power ( *^ ) x y (m - 2) (* フェルマーの小定理 *)
+let ( /^ ) x y = Compelib.Misc.power ( *^ ) x y (m - 2) (* フェルマーの小定理 *)
 
 let%test "4C2 mod prime" = Compelib.Binom.binom ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 4 2 = 6
 let%test "10C3 mod prime" = Compelib.Binom.binom ~of_int:Fun.id ~mul:( *^ ) ~div:( /^ ) 10 3 = 120

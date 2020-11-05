@@ -7,7 +7,7 @@ end
 
 module IntMap = Map.Make (Int)
 
-module G = Compelib.Dijkstra.WeightedDirectedGraph (Int)
+module G = Compelib.Dijkstra.F (Int)
   (struct
     type t = int list IntMap.t ref
     type elt = int
@@ -43,7 +43,7 @@ let%test _ =
   fun u f -> Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
 
 (* 経路長をMapに保存する *)
-module G' = Compelib.Dijkstra.WeightedDirectedGraph (Int)
+module G' = Compelib.Dijkstra.F (Int)
   (struct
     type t = int list IntMap.t ref
     type elt = int
@@ -90,7 +90,7 @@ end
 
 module WeightedRouteMap = Map.Make (WeightedRoute)
 
-module G'' = Compelib.Dijkstra.WeightedDirectedGraph (WeightedRoute)
+module G'' = Compelib.Dijkstra.F (WeightedRoute)
   (struct
     type t = int list WeightedRouteMap.t ref
     type elt = int

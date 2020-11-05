@@ -1,6 +1,6 @@
 (* sample code *)
 
-module G = Compelib.BellmanFord.WeightedDirectedGraph (struct
+module G = Compelib.BellmanFord.F (struct
   type t = int
   let zero = 0
   let inf = max_int

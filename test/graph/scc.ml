@@ -1,7 +1,7 @@
 (* sample code *)
 
 module IntSet = Set.Make (Int)
-module IntG = Compelib.Scc.DirectedGraph (IntSet);;
+module IntG = Compelib.Scc.F (IntSet);;
 
 let%test _ =
   List.map (List.sort_uniq compare)

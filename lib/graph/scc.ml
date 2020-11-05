@@ -1,4 +1,4 @@
-module DirectedGraph (VSet : Set.S) :
+module F (VSet : Set.S) :
 sig
   (* トポロジカルソート *)
   val sort :

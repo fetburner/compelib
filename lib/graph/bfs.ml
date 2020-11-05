@@ -1,4 +1,4 @@
-module DirectedGraph
+module F
   (* 頂点を添字，経路長を要素とした配列の実装 *)
   (Array : sig
     type t

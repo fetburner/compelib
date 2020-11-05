@@ -1,10 +1,10 @@
 let%test _ =
   let n = 1000000000 in
-  Float.abs (Compelib.Power.power ( *. ) 1. (1. +. 1. /. float_of_int n) n -. 2.71828) <= 1e-5
+  Float.abs (Compelib.Misc.power ( *. ) 1. (1. +. 1. /. float_of_int n) n -. 2.71828) <= 1e-5
 
 let fib n =
   fst @@
-  Compelib.Power.power
+  Compelib.Misc.power
     (fun (fn1, fn_1) (fm1, fm_1) ->
       let fnfm = (fn1 - fn_1) * (fm1 - fm_1) in
       (fn1 * fm1 + fnfm, fnfm + fn_1 * fm_1)) (1, 1) (1, 0) n

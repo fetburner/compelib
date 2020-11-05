@@ -1,4 +1,4 @@
-module WeightedDirectedGraph
+module F
   (Weight : sig
     type t
     val inf : t (* オーバーフローの恐れはないので，max_intとか突っ込んでも良い *)

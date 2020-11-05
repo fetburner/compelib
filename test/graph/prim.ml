@@ -9,7 +9,7 @@ end
 
 module IntMap = Map.Make (Int)
 
-module G = Compelib.Prim.WeightedGraph (Int)
+module G = Compelib.Prim.F (Int)
   (struct
     type t = int list IntMap.t ref
     type key = int
@@ -58,7 +58,7 @@ end
 
 module WeightedRouteMap = Map.Make (WeightedRoute)
 
-module G' = Compelib.Prim.WeightedGraph (WeightedRoute)
+module G' = Compelib.Prim.F (WeightedRoute)
   (struct
     type t = int list WeightedRouteMap.t ref
     type key = WeightedRoute.t

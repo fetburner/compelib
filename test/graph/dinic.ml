@@ -1,5 +1,5 @@
 (* 蟻本p. 188のグラフで試す *)
-module G = Compelib.Dinic.FlowNetwork
+module G = Compelib.Dinic.F
 (struct
   type t = int
   let inf = max_int
