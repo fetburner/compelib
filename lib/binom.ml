@@ -1,19 +1,4 @@
-(* intと準同型な体の上で組み合わせの数nCkを計算する関数
-   時間計算量はO(k)，空間計算量はO(1) *)
-let binom :
-  (* intからの準同型写像 *)
-  of_int:(int -> 'a) ->
-  (* 乗算 *)
-  mul:('a -> 'a -> 'a) ->
-  (* 除算 *)
-  div:('a -> 'a -> 'a) ->
-  (* 全体の数n *)
-  int ->
-  (* 選ぶ個数k *)
-  int ->
-  (* 組み合わせの数nCk *)
-  'a
-= fun ~of_int ~mul ~div n k ->
+let binom ~of_int ~mul ~div n k =
   let rec binom_aux nCi k i =
     if k <= i
     then nCi
@@ -24,18 +9,7 @@ let binom :
    intと準同型な体の上でメモ化して計算する関数
    nを固定してk以下の全てのk'に対してnCk'を計算する時，
    時間計算量はO(k)，空間計算量はO(n) *)
-let binom_memo :
-  (* intからの準同型写像 *)
-  of_int:(int -> 'a) ->
-  (* 乗算 *)
-  mul:('a -> 'a -> 'a) ->
-  (* 除算 *)
-  div:('a -> 'a -> 'a) ->
-  (* 全体の数n *)
-  int ->
-  (* 選ぶ個数kを受け取って，組み合わせの数nCkを返す関数 *)
-  (int -> 'a)
-= fun ~of_int ~mul ~div n ->
+let binom_memo ~of_int ~mul ~div n =
   let i = ref 0 in
   (* 組み合わせの数を覚えておく配列
      !i以下の要素は既に組み合わせの数をメモしている *)
