@@ -1,4 +1,4 @@
-module WeightedGraph
+module F
   (* 辺の重み *)
   (Weight : sig
     type t
