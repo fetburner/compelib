@@ -1,4 +1,4 @@
-module Lis (ESet : Set.S) = struct
+module F (ESet : Set.S) = struct
   let lis as_ = ESet.cardinal @@ List.fold_left (fun l a ->
     match ESet.split a l with
     | _, true, _ -> l
