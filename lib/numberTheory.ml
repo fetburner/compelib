@@ -81,16 +81,4 @@ let sieve :
     function
       | k when k <= 1 -> false
       | 2 -> true
-      | k -> k land 1 = 1 && sieve_aux k;;
-
-
-(* sample code *)
-
-(* 呼び出しごとに途中結果がシェアされるので，こういうことしても平気 *)
-List.filter (sieve 1000000) (List.init 1000000 Fun.id);;
-
-(* 入力が小さい時の挙動も調べておきたい *)
-List.init 3 (sieve 3);;
-List.init 4 (sieve 4);;
-List.init 5 (sieve 5);;
-List.init 6 (sieve 6);;
+      | k -> k land 1 = 1 && sieve_aux k
