@@ -32,15 +32,11 @@ let rec comb xs n ys acc () =
   | 0, _ -> Seq.Cons (xs, acc)
   | _, [] -> acc ()
   | n, y :: ys -> comb (y :: xs) (n - 1) ys (comb xs n ys acc) ()
-(* 与えられたリストからn要素を選ぶ組み合わせをストリームとして列挙 *)
-let comb : int -> 'a list -> 'a list Seq.t = fun n xs ->
-  if n < 0 then Seq.empty else comb [] n xs Seq.empty
+let comb n xs = if n < 0 then Seq.empty else comb [] n xs Seq.empty
 
 let rec repcomb xs n ys acc () =
   match n, ys with
   | 0, _ -> Seq.Cons (xs, acc)
   | _, [] -> acc ()
   | n, y :: ys' -> repcomb (y :: xs) (n - 1) ys (repcomb xs n ys' acc) ()
-(* 与えられたリストから重複を許してn要素を選ぶ組み合わせをストリームとして列挙 *)
-let repcomb : int -> 'a list -> 'a list Seq.t = fun n xs ->
-  if n < 0 then Seq.empty else repcomb [] n xs Seq.empty
+let repcomb n xs = if n < 0 then Seq.empty else repcomb [] n xs Seq.empty
