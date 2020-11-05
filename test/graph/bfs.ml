@@ -1,4 +1,4 @@
-module G = Compelib.Bfs.DirectedGraph (struct
+module G = Compelib.Bfs.F (struct
   type t = (int, Bigarray.int_elt, Bigarray.c_layout) Bigarray.Genarray.t
   type elt = int
   type key = int array

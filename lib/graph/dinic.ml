@@ -27,7 +27,7 @@ sig
     (int * int * Flow.t) church_list
 end =
 struct
-  module G = Bfs.DirectedGraph (struct
+  module G = Bfs.F (struct
     type t = int array
     type key = int
     type elt = int
