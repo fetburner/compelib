@@ -66,49 +66,49 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let height = function
       | Empty -> 0
-      | Node { height } -> height
+      | Node { height; _ } -> height
 
     let cardinal = function
       | Empty -> 0
-      | Node { cardinal } -> cardinal
+      | Node { cardinal; _ } -> cardinal
 
-    let create ~left ~data ~count ~right =
+    let create left data count right =
       Node
         { left; data; count; right;
           height = 1 + max (height left) (height right);
           cardinal = count + cardinal left + cardinal right }
 
-    let balance ~left:l ~data:x ~count:d ~right:r =
+    let balance l x d r =
       let hl = height l in
       let hr = height r in
       if hl > hr + 2 then begin
         match l with
-        | Empty -> invalid_arg "MultiSet.balance" | Node { left = ll; data = lv; count = ld; right = lr } ->
+        | Empty -> invalid_arg "MultiSet.balance" | Node { left = ll; data = lv; count = ld; right = lr; _ } ->
             if height ll >= height lr then
               create ll lv ld (create lr x d r)
             else begin
               match lr with
               | Empty -> invalid_arg "MultiSet.balance"
-              | Node { left = lrl; data = lrv; count = lrd; right = lrr } ->
+              | Node { left = lrl; data = lrv; count = lrd; right = lrr; _ } ->
                   create (create ll lv ld lrl) lrv lrd (create lrr x d r)
             end
       end else if hr > hl + 2 then begin
         match r with
         | Empty -> invalid_arg "MultiSet.balance"
-        | Node { left = rl; data = rv; count = rd; right = rr } ->
+        | Node { left = rl; data = rv; count = rd; right = rr; _ } ->
             if height rr >= height rl then
               create (create l x d rl) rv rd rr
             else begin
               match rl with
               | Empty -> invalid_arg "MultiSet.balance"
-              | Node { left = rll; data = rlv; count = rld; right = rlr } ->
+              | Node { left = rll; data = rlv; count = rld; right = rlr; _ } ->
                   create (create l x d rll) rlv rld (create rlr rv rd rr)
             end
       end else create l x d r
 
     let rec add x n = function
       | Empty -> create Empty x n Empty
-      | Node { left; data = y; count; right } ->
+      | Node { left; data = y; count; right; _ } ->
           match Ord.compare x y with
           | 0 ->
               create left x (count + n) right
@@ -120,14 +120,14 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
     (* 最小の要素とその数を返す *)
     let rec count_min_elt = function
       | Empty -> raise Not_found
-      | Node { left = Empty; data; count } -> (data, count)
-      | Node { left } -> count_min_elt left
+      | Node { left = Empty; data; count; _ } -> (data, count)
+      | Node { left; _ } -> count_min_elt left
 
     (* 最小の要素を全て削除する *)
     let rec clear_min_elt = function
       | Empty -> invalid_arg "MultiSet.clear_min_elt"
-      | Node { left = Empty; right } -> right
-      | Node { left; data; count; right } -> balance (clear_min_elt left) data count right
+      | Node { left = Empty; right; _ } -> right
+      | Node { left; data; count; right; _ } -> balance (clear_min_elt left) data count right
 
     let merge t1 t2 =
       match t1, t2 with
@@ -139,7 +139,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec remove x n = function
       | Empty -> Empty
-      | Node { left; data = y; count; right } ->
+      | Node { left; data = y; count; right; _ } ->
           match Ord.compare x y with
           | 0 ->
               if count <= n then
@@ -153,7 +153,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec count x = function
       | Empty -> 0
-      | Node { left; data = y; count = n; right } ->
+      | Node { left; data = y; count = n; right; _ } ->
           match Ord.compare x y with
           | 0 -> n
           | c when c < 0 ->
@@ -163,7 +163,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec count_lt x = function
       | Empty -> 0
-      | Node { left; data = y; count; right } ->
+      | Node { left; data = y; count; right; _ } ->
           match Ord.compare x y with
           | 0 ->
               cardinal left
@@ -174,7 +174,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec count_gt x = function
       | Empty -> 0
-      | Node { left; data = y; count; right } ->
+      | Node { left; data = y; count; right; _ } ->
           match Ord.compare x y with
           | 0 ->
               cardinal right
@@ -185,7 +185,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec nth_inc n = function
       | Empty -> raise Not_found
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           if n < cardinal left then
             nth_inc n left
           else if n < cardinal left + count then
@@ -195,7 +195,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec nth_dec n = function
       | Empty -> raise Not_found
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           if n < cardinal right then
             nth_dec n right
           else if n < cardinal right + count then
@@ -205,7 +205,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec elements_inc acc = function
       | Empty -> acc
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           elements_inc
             (Array.fold_left (fun acc x -> x :: acc)
               (elements_inc acc right)
@@ -213,7 +213,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec elements_dec acc = function
       | Empty -> acc
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           elements_dec
             (Array.fold_left (fun acc x -> x :: acc)
               (elements_dec acc left)
@@ -221,7 +221,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec take_inc n = function
       | Empty -> []
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           if n < cardinal left then
             take_inc n left
           else if n < cardinal left + count then
@@ -234,7 +234,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec take_dec n = function
       | Empty -> []
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           if n < cardinal right then
             take_dec n right
           else if n < cardinal right + count then
@@ -250,7 +250,7 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec fold_inc f acc = function
       | Empty -> acc
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           fold_inc f
             (Array.fold_left f
               (fold_inc f acc left)
@@ -258,17 +258,17 @@ module Make (Ord : OrderedType) : S with type elt = Ord.t =
 
     let rec fold_dec f acc = function
       | Empty -> acc
-      | Node { left; data; count; right } ->
+      | Node { left; data; count; right; _ } ->
           fold_dec f
             (Array.fold_right f
               (Array.make count data)
               (fold_dec f acc right)) left
     let fold_dec f t acc = fold_dec f acc t
 
-    let rec min_elt t = fst (count_min_elt t)
+    let min_elt t = fst (count_min_elt t)
 
     let rec max_elt = function
       | Empty -> raise Not_found
-      | Node { data; right = Empty } -> data
-      | Node { right } -> max_elt right
+      | Node { data; right = Empty; _ } -> data
+      | Node { right; _ } -> max_elt right
   end
