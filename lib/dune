@@ -1,3 +1,6 @@
+(copy_files# graph/*.{ml,mli})
+(copy_files# containers/*.{ml,mli})
+
 (library
  (name compelib)
  (inline_tests)
