@@ -7,7 +7,7 @@ module Int = struct
   let compare = compare
 end
 
-module G = Compelib.WarshallFloyd.WeightedDirectedGraph (Int)
+module G = Compelib.WarshallFloyd.F (Int)
 
 let d = G.warshall_floyd 5
   { G.fold = fun f -> List.fold_right f
