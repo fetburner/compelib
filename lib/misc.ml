@@ -43,3 +43,8 @@ let call_cc f =
   let return = ref (fun () -> raise Not_found) in
   try f (fun x -> (return := fun () -> x); raise Exodus)
   with Exodus -> !return ()
+
+(* compute exponentiation *)
+let rec power ( * ) e m n =
+  if n <= 0 then e
+  else power ( * ) (if n land 1 = 0 then e else m * e) (m * m) (n lsr 1);;
