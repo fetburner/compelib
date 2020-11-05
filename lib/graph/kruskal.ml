@@ -26,7 +26,7 @@ sig
     (int * int * Weight.t) church_list
 end =
 struct
-  module UF = UnionFind.UnionFind.Make (struct
+  module UF = UnionFind.Make (struct
     type t = unit
     let union _ _ = ()
   end)
