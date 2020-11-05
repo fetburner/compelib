@@ -48,16 +48,16 @@ end with type elt = S.t = struct
   let rec update i f t =
     assert (0 <= i && i < t.size);
     match t with
-    | { body = lazy Leaf } -> { t with data = f t.data }
-    | { body = lazy (Node (left, right)) } ->
+    | { body = lazy Leaf; _ } -> { t with data = f t.data }
+    | { body = lazy (Node (left, right)); _ } ->
         if i < left.size then make_node (update i f left) right
         else make_node left (update (i - left.size) f right)
 
   let rec update_range l r f t =
     assert (0 <= l && l < r && r <= t.size);
     match t with
-    | { body = lazy Leaf } -> { t with data = f t.data }
-    | { body = lazy (Node (left, right)) } ->
+    | { body = lazy Leaf; _ } -> { t with data = f t.data }
+    | { body = lazy (Node (left, right)); _ } ->
         if l <= 0 && t.size <= r then
           { t with
             data = f t.data;
@@ -77,8 +77,8 @@ end with type elt = S.t = struct
   let rec query l r t =
     assert (0 <= l && l < r && r <= t.size);
     match t with
-    | { body = lazy Leaf } -> t.data
-    | { body = lazy (Node (left, right)) } ->
+    | { body = lazy Leaf; _ } -> t.data
+    | { body = lazy (Node (left, right)); _ } ->
         if l <= 0 && t.size <= r then t.data
         else if r <= left.size then query l r left
         else if left.size <= l then query (l - left.size) (r - left.size) right
