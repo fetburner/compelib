@@ -1,4 +1,4 @@
-module CC = Compelib.CoordComp.CoordComp (struct
+module CC = Compelib.CoordComp.F (struct
   type t = int
   let compare = compare
 end)

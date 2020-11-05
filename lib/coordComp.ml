@@ -1,5 +1,5 @@
 (* 座標圧縮 *)
-module CoordComp
+module F
   (* 座標の型 *)
   (Coord : sig
     type t
