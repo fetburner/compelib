@@ -63,29 +63,3 @@ end = struct
   (* 基本操作の組み合わせで表現できるもの *)
   let replace t i d = add (remove t i) i d
 end
-
-(* sample code *)
-
-let bindings t = PHashtbl.fold (fun i d acc -> (i, d) :: acc) t [];;
-
-(* 単相になってしまうが，内部では代入しまくってるので仕方あるまい *)
-let h1 = PHashtbl.create 10;;
-bindings h1;;
-let h2 = PHashtbl.remove h1 0;;
-bindings h1;;
-bindings h2;;
-let h3 = PHashtbl.add h2 0 1;;
-bindings h1;;
-bindings h2;;
-bindings h3;;
-let h4 = PHashtbl.remove h3 0;;
-bindings h1;;
-bindings h2;;
-bindings h3;;
-bindings h4;;
-let h5 = PHashtbl.add h3 0 2;;
-bindings h1;;
-bindings h2;;
-bindings h3;;
-bindings h4;;
-bindings h5;;
