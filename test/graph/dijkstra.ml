@@ -7,7 +7,7 @@ end
 
 module IntMap = Map.Make (Int)
 
-module G = WeightedDirectedGraph (Int)
+module G = Compelib.Dijkstra.WeightedDirectedGraph (Int)
   (struct
     type t = int list IntMap.t ref
     type elt = int
@@ -43,7 +43,7 @@ let%test _ =
   fun u f -> Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
 
 (* 経路長をMapに保存する *)
-module G = WeightedDirectedGraph (Int)
+module G' = Compelib.Dijkstra.WeightedDirectedGraph (Int)
   (struct
     type t = int list IntMap.t ref
     type elt = int
@@ -67,14 +67,14 @@ module G = WeightedDirectedGraph (Int)
 let%test _ =
   ( = ) [ 0; 7; 9; 20; 20; 11; max_int; max_int; max_int; max_int ] @@
   List.init 10 @@
-  Fun.flip (G.shortest_path (ref IntMap.empty) (ref IntMap.empty)) 0 @@
+  Fun.flip (G'.shortest_path (ref IntMap.empty) (ref IntMap.empty)) 0 @@
   fun u f -> Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
 
 (* 無限グラフも可 *)
 let%test _ =
   ( = ) [0; 1; 2; 3; 4; 5; 6; 7; 8; 9] @@
   List.init 10 @@ 
-  Fun.flip (G.shortest_path (ref IntMap.empty) (ref IntMap.empty)) 0 @@
+  Fun.flip (G'.shortest_path (ref IntMap.empty) (ref IntMap.empty)) 0 @@
   fun u f -> f (u + 1) @@ ( + ) 1
 
 (* 経路復元する *)
@@ -90,7 +90,7 @@ end
 
 module WeightedRouteMap = Map.Make (WeightedRoute)
 
-module G = WeightedDirectedGraph (WeightedRoute)
+module G'' = Compelib.Dijkstra.WeightedDirectedGraph (WeightedRoute)
   (struct
     type t = int list WeightedRouteMap.t ref
     type elt = int
@@ -116,5 +116,5 @@ let%test _ =
     [ (0, [0]); (7, [1; 0]); (9, [2; 0]); (20, [3; 2; 0]);
       (20, [4; 5; 2; 0]); (11, [5; 2; 0]); (max_int, [])] @@
   List.init 7 @@
-  Fun.flip (G.shortest_path (ref WeightedRouteMap.empty) (Array.make 7 (max_int, []))) 0 @@
+  Fun.flip (G''.shortest_path (ref WeightedRouteMap.empty) (Array.make 7 (max_int, []))) 0 @@
   fun u f -> Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ fun (w, r) -> (c + w, v :: r)
