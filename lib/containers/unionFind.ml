@@ -34,18 +34,21 @@ module UnionFind = struct
       let root = find uf in
       let root' = find uf' in
       if root != root' then begin
-        let Root (rank, elts) = !root in
-        let Root (rank', elts') = !root' in
-        let root, root' =
-          if rank <= rank'
-          then root, root'
-          else root', root in
-        root := Link root';
-        root' := Root (rank' + (if rank = rank' then 1 else 0), Set.union elts elts')
+        match !root, !root' with
+        | Link _, _
+        | _, Link _ -> failwith "unite"
+        | Root (rank, elts), Root (rank', elts') ->
+            let root, root' =
+              if rank <= rank'
+              then root, root'
+              else root', root in
+            root := Link root';
+            root' := Root (rank' + (if rank = rank' then 1 else 0), Set.union elts elts')
       end
 
     let elements uf =
       match find uf with
+      | { contents = Link _ } -> failwith "elements"
       | { contents = Root (_, elts) } -> elts
   end
 end
