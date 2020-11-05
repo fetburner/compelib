@@ -9,7 +9,7 @@ end
 
 module IntMap = Map.Make (Int)
 
-module G = WeightedGraph (Int)
+module G = Compelib.Prim.WeightedGraph (Int)
   (struct
     type t = int list IntMap.t ref
     type key = int
@@ -49,7 +49,7 @@ module WeightedRoute = struct
   (* 重みは同じでも違う頂点への辺を同一視されないようにする *)
   type t = int * int * ((int * int * int) list -> (int * int * int) list)
   let zero = (0, min_int, fun xs -> xs)
-  let ( + ) (w, u, f) (w', v, g) = (w + w', v, fun xs -> g (f xs))
+  let ( + ) (w, _, f) (w', v, g) = (w + w', v, fun xs -> g (f xs))
   let compare (w, u, _) (w', v, _) =
     match compare w w' with
     | 0 -> compare u v
@@ -58,7 +58,7 @@ end
 
 module WeightedRouteMap = Map.Make (WeightedRoute)
 
-module G = WeightedGraph (WeightedRoute)
+module G' = Compelib.Prim.WeightedGraph (WeightedRoute)
   (struct
     type t = int list WeightedRouteMap.t ref
     type key = WeightedRoute.t
@@ -80,7 +80,7 @@ module G = WeightedGraph (WeightedRoute)
   end)
 
 let (w, _, f) =
-  G.minimum_spanning_tree (ref WeightedRouteMap.empty)
+  G'.minimum_spanning_tree (ref WeightedRouteMap.empty)
     (Array.make 7 (max_int, max_int, fun xs -> xs))
     (fun u f -> List.iter (fun (v, w) -> f v (w, v, fun xs -> (u, v, w) :: xs)) es.(u)) 0
 
