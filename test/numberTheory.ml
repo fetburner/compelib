@@ -1,6 +1,6 @@
 (* 呼び出しごとに途中結果がシェアされるので，こういうことしても平気 *)
 let%test _ =
-  List.filter (sieve 1000) (List.init 1000 Fun.id) =
+  List.filter (Compelib.NumberTheory.sieve 1000) (List.init 1000 Fun.id) =
   [2; 3; 5; 7; 11; 13; 17; 19; 23; 29; 31; 37; 41; 43; 47; 53; 59; 61; 67; 71;
    73; 79; 83; 89; 97; 101; 103; 107; 109; 113; 127; 131; 137; 139; 149; 151;
    157; 163; 167; 173; 179; 181; 191; 193; 197; 199; 211; 223; 227; 229; 233;
@@ -14,7 +14,7 @@ let%test _ =
    919; 929; 937; 941; 947; 953; 967; 971; 977; 983; 991; 997]
 
 (* 入力が小さい時の挙動も調べておきたい *)
-let%test _ = List.init 3 (sieve 3) = [false; false; true]
-let%test _ = List.init 4 (sieve 4) = [false; false; true; true]
-let%test _ = List.init 5 (sieve 5) = [false; false; true; true; false]
-let%test _ = List.init 6 (sieve 6) = [false; false; true; true; false; true]
+let%test _ = List.init 3 (Compelib.NumberTheory.sieve 3) = [false; false; true]
+let%test _ = List.init 4 (Compelib.NumberTheory.sieve 4) = [false; false; true; true]
+let%test _ = List.init 5 (Compelib.NumberTheory.sieve 5) = [false; false; true; true; false]
+let%test _ = List.init 6 (Compelib.NumberTheory.sieve 6) = [false; false; true; true; false; true]
