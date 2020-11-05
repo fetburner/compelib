@@ -97,12 +97,12 @@ module PersistentUnionFind :
     module ByHashtbl = struct
       module Make (Elt : Map.OrderedType) = struct
         include (Core (Elt) (struct
-          type 'a t = (Elt.t, 'a) PHashtbl.t
-          let add x y h = PHashtbl.replace h x y
-          let find_opt x h = try Some (PHashtbl.find h x) with Not_found -> None
+          type 'a t = (Elt.t, 'a) PHashtbl.PHashtbl.t
+          let add x y h = PHashtbl.PHashtbl.replace h x y
+          let find_opt x h = try Some (PHashtbl.PHashtbl.find h x) with Not_found -> None
         end))
 
-        let make n = ref (PHashtbl.create n)
+        let make n = ref (PHashtbl.PHashtbl.create n)
       end
     end
 

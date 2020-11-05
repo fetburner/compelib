@@ -50,35 +50,3 @@ end
               bfs t in
     bfs
 end
-
-(* 使用例 *)
-
-module G = DirectedGraph (struct
-  type t = (int, Bigarray.int_elt, Bigarray.c_layout) Bigarray.Genarray.t
-  type elt = int
-  type key = int array
-  let get = Bigarray.Genarray.get
-  let set = Bigarray.Genarray.set
-end)
-
-let maze =
-  [|"......";
-    ".#####";
-    "..#.#.";
-    "..##..";
-    "#....."|];;
-
-let d = G.shortest_path
-  (let d = Bigarray.Genarray.create Bigarray.int Bigarray.c_layout [| 6; 5 |] in Bigarray.Genarray.fill d max_int; d)
-  (fun [| i; j |] f ->
-    List.iter (fun ([| i; j |] as v) ->
-      match maze.(j).[i] = '.' with
-      | false | exception (Invalid_argument _) -> ()
-      | true -> f v)
-    [ [| i + 1; j |]; [| i - 1; j |]; [| i; j + 1 |]; [| i; j - 1 |] ]) [| 0; 0 |];;
-
-d [| 5; 0 |];;
-d [| 3; 2 |];;
-
-(* このBFSを用いるのとダイクストラ法を用いるのとの計算量の違いは，
-   ヒープを適切に選べば定数倍でしかないので，経路復元がしたいならダイクストラ法の実装を用いること *)

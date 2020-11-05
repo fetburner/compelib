@@ -35,7 +35,7 @@ end = struct
     | { contents = Diff (_, _, _) } as t ->
         reroot (fun a -> t := Arr a; k a) t
 
-  let rec get t i = reroot (fun a -> a.(i)) t
+  let get t i = reroot (fun a -> a.(i)) t
 
   let set t i v =
     reroot (fun a ->

@@ -27,20 +27,3 @@ end = struct
     (n, (fun c -> CoordMap.find c comp), (fun n -> IntMap.find n decomp))
   let compress cs = compress @@ List.sort Coord.compare cs
 end
-
-(* sample code *)
-
-module CC = CoordComp (struct
-  type t = int
-  let compare = compare
-end)
-
-let l = [3; 1; 4; 1]
-let n, f, g = CC.compress l;;
-List.map f l;;
-List.init n g;;
-
-let l = [100; 100; 100]
-let n, f, g = CC.compress l;;
-List.map f l;;
-List.init n g;;

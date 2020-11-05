@@ -43,26 +43,4 @@ let rec repcomb xs n ys acc () =
   | n, y :: ys' -> repcomb (y :: xs) (n - 1) ys (repcomb xs n ys' acc) ()
 (* 与えられたリストから重複を許してn要素を選ぶ組み合わせをストリームとして列挙 *)
 let repcomb : int -> 'a list -> 'a list Seq.t = fun n xs ->
-  if n < 0 then Seq.empty else repcomb [] n xs Seq.empty;;
-
-(* sample code *)
-List.of_seq @@ perm 2 [1; 2; 3; 4];;
-List.of_seq @@ perm 0 [1; 2; 3];;
-List.of_seq @@ perm 3 [1; 2; 3];;
-List.of_seq @@ perm 4 [1; 2; 3];;
-
-List.of_seq @@ comb 2 [1; 2; 3];;
-List.of_seq @@ comb 3 [1; 2; 3];;
-List.of_seq @@ comb 0 [1; 2; 3];;
-List.of_seq @@ comb 4 [1; 2; 3];;
-
-List.of_seq @@ repcomb 2 [1; 2; 3];;
-List.of_seq @@ repcomb 3 [1; 2; 3];;
-List.of_seq @@ repcomb 0 [1; 2; 3];;
-List.of_seq @@ repcomb 4 [1; 2; 3];;
-
-(* 添字の違う要素は区別される *)
-List.of_seq @@ perm 2 [1; 1; 2];;
-List.of_seq @@ comb 2 [1; 1; 2];;
-List.of_seq @@ repcomb 2 [1; 1; 2];;
-
+  if n < 0 then Seq.empty else repcomb [] n xs Seq.empty

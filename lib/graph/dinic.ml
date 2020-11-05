@@ -27,7 +27,7 @@ sig
     (int * int * Flow.t) church_list
 end =
 struct
-  module G = DirectedGraph (struct
+  module G = Bfs.DirectedGraph (struct
     type t = int array
     type key = int
     type elt = int
@@ -95,23 +95,4 @@ struct
           if 0 <= Flow.compare e.capacity e.original_capacity
           then acc
           else f (e.from, e.to_, e.original_capacity - e.capacity) acc))) adj })
-end;;
-
-(* 蟻本p. 188のグラフで試す *)
-module G = FlowNetwork
-(struct
-  type t = int
-  let inf = max_int
-  let zero = 0
-  let ( + ) = ( + )
-  let ( - ) = ( - )
-  let compare = compare
-end);;
-
-let (f, e) = G.max_flow 5
-  { fold = fun f -> List.fold_right f 
-    [ (0, 1, 10, 0); (0, 2, 2, 0);
-      (1, 2, 6, 0); (1, 3, 6, 0);
-      (2, 4, 5, 0);
-      (3, 2, 3, 0); (3, 4, 8, 0) ] } 0 4;;
-e.fold List.cons [];;
+end

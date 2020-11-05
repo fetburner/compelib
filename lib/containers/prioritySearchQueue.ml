@@ -61,10 +61,6 @@ end = struct
     | LLoser (_, _, _, _, _, r)
     | RLoser (_, _, _, _, _, r) -> r
 
-  let max_key = function
-    | Void -> raise (Invalid_argument "max_key")
-    | Winner (_, _, _, m) -> m
-
   let lloser k p l m r = LLoser (1 + cardinal' l + cardinal' r, k, p, l, m, r)
   let rloser k p l m r = RLoser (1 + cardinal' l + cardinal' r, k, p, l, m, r)
 
@@ -170,7 +166,7 @@ end = struct
     then rbalance_right k p l m r
     else rloser k p l m r
 
-  let rec play t t' =
+  let play t t' =
     match t, t' with
     | Void, _ -> t'
     | _, Void -> t

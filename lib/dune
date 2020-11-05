@@ -1,5 +1,7 @@
+(copy_files# graph/*.{ml,mli})
+(copy_files# containers/*.{ml,mli})
+
 (library
- (inline_tests)
  (name compelib)
- (preprocess
-  (pps ppx_inline_test)))
+ (inline_tests)
+ (preprocess (pps ppx_inline_test)))
