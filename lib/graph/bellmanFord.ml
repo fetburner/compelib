@@ -1,4 +1,3 @@
-
 module WeightedDirectedGraph
   (Weight : sig
     type t
@@ -72,26 +71,3 @@ struct
     done;
     Array.get d
 end
-
-(* sample code *)
-
-module G = WeightedDirectedGraph (struct
-  type t = float
-  let zero = 0.
-  let inf = infinity
-  let neg_inf = neg_infinity
-  let ( + ) = ( +. )
-  let compare = compare
-end)
-
-let d = G.bellman_ford 8 { G.fold = fun f -> List.fold_right f
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.) ] } 1;;
-List.init 8 d;;
-
-let d = G.bellman_ford 8 { G.fold = fun f -> List.fold_right f
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.) ] } 1;;
-List.init 8 d;;
-
-let d = G.bellman_ford 8 { G.fold = fun f -> List.fold_right f
-  [ (1, 2, 1.); (2, 3, 1.); (3, 7, 1.); (4, 5, -1.); (5, 6, -1.); (6, 4, -1.); (7, 4, -1.); (4, 7, 1.) ] } 1;;
-List.init 8 d;;
