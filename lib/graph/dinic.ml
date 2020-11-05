@@ -1,4 +1,4 @@
-module FlowNetwork
+module F
   (* 流量 *)
   (Flow : sig
     type t
