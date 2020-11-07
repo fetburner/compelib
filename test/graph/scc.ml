@@ -1,13 +1,29 @@
 (* sample code *)
 
-module IntSet = Set.Make (Int)
-module IntG = Compelib.Scc.F (IntSet);;
+module IntG = Compelib.Scc.F
+  (struct
+    type t = int
+    type u = int
+    let rec fold f n acc =
+      if n = 0
+      then acc
+      else fold f (n - 1) (f n acc)
+  end)
+  (struct
+    type t = bool array
+    type key = int
+    type elt = bool
+    type size = int
+    let make n = Array.make (n + 1) false
+    let get = Array.get
+    let set = Array.set
+  end)
 
 let%test _ =
   List.map (List.sort_uniq compare)
     [[2; 3; 1]; [4; 5]; [6]; [7]] =
   List.map (List.sort_uniq compare)
-    (IntG.scc [1; 2; 3; 4; 5; 6; 7] (function
+    (IntG.scc 7 (function
       | 1 -> [2]
       | 2 -> [3]
       | 3 -> [1; 4]
@@ -17,7 +33,7 @@ let%test _ =
       | 7 -> []))
 
 let%test _ =
-  IntG.sort [1; 2; 3; 4; 5; 6; 7] (function
+  IntG.sort 7 (function
     | 1 -> [2]
     | 2 -> [3]
     | 3 -> [1; 4]

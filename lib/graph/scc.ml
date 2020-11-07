@@ -1,18 +1,35 @@
-module F (VSet : Set.S) = struct
-  let rec visit es v (vs, l) =
-    if VSet.mem v vs then
-      let (vs', l') =
-        List.fold_right (visit es) (es v) (VSet.remove v vs, l) in
-      (vs', v :: l')
-    else (vs, l)
+module F
+  (Vertex : sig
+    type t
+    type u
+    val fold : (t -> 'a -> 'a) -> u -> 'a -> 'a
+  end)
+  (Array : sig
+    type t
+    type elt = bool
+    type key = Vertex.t
+    type size = Vertex.u
+    val make : size -> t
+    val get : t -> key -> elt
+    val set : t -> key -> elt -> unit
+  end)
+= struct
+  type vertex = Vertex.t
+  type vertices = Vertex.u
 
-  let sort vs es =
-    snd @@ List.fold_right (visit es) vs (VSet.of_list vs, [])
+  let rec visit es vs v l =
+    if Array.get vs v
+    then l
+    else (Array.set vs v true; v :: List.fold_right (visit es vs) (es v) l)
 
-  let scc vs es =
-    snd @@ List.fold_right (fun v (vs, l) ->
-      if VSet.mem v vs then
-        let (vs', cs) = visit es v (vs, []) in
-        (vs', cs :: l)
-      else (vs, l)) (sort vs es) (VSet.of_list vs, [])
+  let sort n es =
+    let vs = Array.make n in
+    Vertex.fold (visit es vs) n []
+
+  let scc n es =
+    let vs = Array.make n in
+    List.fold_right (fun v l ->
+      if Array.get vs v
+      then l
+      else visit es vs v [] :: l) (sort n es) []
 end
