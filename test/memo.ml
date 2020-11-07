@@ -19,8 +19,8 @@ let%test _ =
 (* sample code *)
 let ( +^ ) x y = (x + y) mod 1000000007
 
-let fib = Compelib.Memo.memoize_cps 1000000 @@ fun fib n k ->
+let fib n k = Compelib.Memo.memoize_cps 1000000 (fun fib n k ->
   if n <= 1 then k 1
-  else fib (n - 1) @@ fun x -> fib (n - 2) @@ fun y -> k @@ x +^ y
+  else fib (n - 1) @@ fun x -> fib (n - 2) @@ fun y -> k @@ x +^ y) n k
 
 let%test_unit _ = ignore @@ List.init 1000000 @@ fun x -> fib x @@ fun y -> y
