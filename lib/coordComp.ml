@@ -6,8 +6,6 @@ module F
     val compare : t -> t -> int
   end)
 = struct
-  module CoordMap = Map.Make (Coord)
-
   let compress cs =
     let a =
       Array.of_list @@
