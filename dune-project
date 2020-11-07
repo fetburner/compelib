@@ -6,6 +6,7 @@
 
 (license MIT)
 (authors "Masayuki Mizuno <mizuno@wantedly.com>")
+(maintainers "Masayuki Mizuno <mizuno@wantedly.com>")
 (source (github fetburner/compelib))
 
 (package
