@@ -6,4 +6,4 @@
   (inline_tests)
   (libraries compelib)
   (preprocess (pps ppx_inline_test))
-  (flags (:standard -warn-error -a)))
+  (flags (:standard -w -8)))
