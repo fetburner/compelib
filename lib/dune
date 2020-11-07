@@ -5,7 +5,4 @@
   (prelude bsearch)
   (extracted_modules bsearch))
 
-(library
- (name compelib)
- (inline_tests)
- (preprocess (pps ppx_inline_test)))
+(library (name compelib))

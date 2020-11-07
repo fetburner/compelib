@@ -7,8 +7,10 @@
 
 (license MIT)
 (authors "Masayuki Mizuno <mizuno@wantedly.com>")
+(maintainers "Masayuki Mizuno <mizuno@wantedly.com>")
 (source (github fetburner/compelib))
 
 (package
   (name compelib)
-  (synopsis "OCaml competive programming library"))
+  (synopsis "OCaml competive programming library")
+  (depends (ppx_inline_test (>= 0.14.1))))
