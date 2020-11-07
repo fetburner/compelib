@@ -9,11 +9,25 @@ end
 
 module IntMap = Map.Make (Int)
 
-module G = Compelib.Prim.F (Int)
+module G = Compelib.Prim.F
   (struct
-    type t = int list IntMap.t ref
+    type t = int
+    type v = int
+    type e = int
+    let empty = 0
+    let add = ( + )
+  end)
+  (struct
+    type t = int
+    let zero = 0
+    let compare = compare
+  end)
+  (struct
+    type t = (int * int) list IntMap.t ref
     type key = int
-    type elt = int
+    type elt = int * int
+    type size = int
+    let make _ = ref IntMap.empty
     let take_min_binding q =
       match IntMap.min_binding !q with
       | exception Not_found -> None
@@ -26,6 +40,8 @@ module G = Compelib.Prim.F (Int)
     type t = int array
     type key = int
     type elt = int
+    type size = int
+    let make = Fun.flip Array.make max_int
     let get = Array.get
     let set = Array.set
   end)
@@ -40,8 +56,8 @@ let es =
     [(4, 9); (5, 11)]|]
 
 let%test _ =
-  G.minimum_spanning_tree (ref IntMap.empty) (Array.make 7 max_int)
-    (fun u f -> List.iter (fun (v, w) -> f v w) es.(u)) 0 = 39
+  G.minimum_spanning_tree 7
+    (fun u f -> List.iter (fun (v, w) -> f v w w) es.(u)) 0 = 39
 
 (* 使った辺を列挙したい場合 *)
 
@@ -56,35 +72,47 @@ module WeightedRoute = struct
     | x -> x
 end
 
-module WeightedRouteMap = Map.Make (WeightedRoute)
-
-module G' = Compelib.Prim.F (WeightedRoute)
+module G' = Compelib.Prim.F
   (struct
-    type t = int list WeightedRouteMap.t ref
-    type key = WeightedRoute.t
-    type elt = int
-    let take_min_binding q =
-      match WeightedRouteMap.min_binding !q with
-      | exception Not_found -> None
-      | (w, [v]) -> q := WeightedRouteMap.remove w !q; Some (w, v)
-      | (w, v :: vs) -> q := WeightedRouteMap.add w vs !q; Some (w, v)
-    let add q w v  =
-      q := WeightedRouteMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
+    type t = (int * int * int) list
+    type v = int
+    type e = (int * int * int)
+    let empty = []
+    let add = List.cons
   end)
   (struct
-    type t = WeightedRoute.t array
+    type t = int
+    let zero = 0
+    let compare = compare
+  end)
+  (struct
+    type t = (int * (int * int * int)) list IntMap.t ref
     type key = int
-    type elt = WeightedRoute.t
+    type elt = int * (int * int * int)
+    type size = int
+    let make _ = ref IntMap.empty
+    let take_min_binding q =
+      match IntMap.min_binding !q with
+      | exception Not_found -> None
+      | (w, [v]) -> q := IntMap.remove w !q; Some (w, v)
+      | (w, v :: vs) -> q := IntMap.add w vs !q; Some (w, v)
+    let add q w v  =
+      q := IntMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
+  end)
+  (struct
+    type t = int array
+    type key = int
+    type elt = int
+    type size = int
+    let make = Fun.flip Array.make max_int
     let get = Array.get
     let set = Array.set
   end)
 
-let (w, _, f) =
-  G'.minimum_spanning_tree (ref WeightedRouteMap.empty)
-    (Array.make 7 (max_int, max_int, fun xs -> xs))
-    (fun u f -> List.iter (fun (v, w) -> f v (w, v, fun xs -> (u, v, w) :: xs)) es.(u)) 0
+let t =
+  G'.minimum_spanning_tree 7
+    (fun u f -> List.iter (fun (v, w) -> f v w (u, v, w)) es.(u)) 0
 
-let%test _ = w = 39
 let%test _ =
-  List.sort_uniq compare (f []) =
+  List.sort_uniq compare t =
   List.sort_uniq compare [(4, 6, 9); (4, 2, 5); (1, 4, 7); (0, 1, 7); (3, 5, 6); (0, 3, 5)]
