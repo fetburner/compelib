@@ -13,4 +13,6 @@
 (package
   (name compelib)
   (synopsis "OCaml competive programming library")
-  (depends (ppx_inline_test (>= 0.14.1))))
+  (depends
+    (coq (>= 8.10))
+    (ppx_inline_test (>= 0.14.1))))
