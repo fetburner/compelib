@@ -38,8 +38,8 @@ let fold_tournament f xs = fold_tournament true f xs
 let list_of_string s = List.init (String.length s) (String.get s)
 let array_of_string s = Array.init (String.length s) (String.get s)
 
-exception Exodus
 let call_cc f =
+  let exception Exodus in
   let return = ref (fun () -> raise Not_found) in
   try f (fun x -> (return := fun () -> x); raise Exodus)
   with Exodus -> !return ()
