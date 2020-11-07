@@ -1,4 +1,5 @@
 (lang dune 2.7)
+(using coq 0.2)
 
 (name compelib)
 
@@ -12,4 +13,6 @@
 (package
   (name compelib)
   (synopsis "OCaml competive programming library")
-  (depends (ppx_inline_test (>= 0.14.1))))
+  (depends
+    (coq (>= 8.10))
+    (ppx_inline_test (>= 0.14.1))))
