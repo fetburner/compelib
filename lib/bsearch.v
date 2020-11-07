@@ -147,7 +147,7 @@ Next Obligation.
   { apply Z.div_le_lower_bound; lia. }
   assert ((l + r) / 2 < r).
   { apply Z.div_lt_upper_bound; lia. }
-  apply Z2Nat.inj_lt; simpl; omega.
+  apply Z2Nat.inj_lt; simpl; lia.
 Qed.
 Next Obligation.
   assert ((l + r) / 2 < r).

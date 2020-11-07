@@ -1,6 +1,10 @@
 (copy_files# graph/*.{ml,mli})
 (copy_files# containers/*.{ml,mli})
 
+(coq.extraction
+  (prelude bsearch)
+  (extracted_modules bsearch))
+
 (library
  (name compelib)
  (inline_tests)
