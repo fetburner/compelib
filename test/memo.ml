@@ -42,8 +42,8 @@ let%test _ =
 
 let ( +^ ) x y = (x + y) mod 1000000007
 
-let fib n k = M.memoize_cps 1000000 (fun fib n k ->
+let fib = Fun.flip (M.memoize_cps 1000000 (fun fib n k ->
   if n <= 1 then k 1
-  else fib (n - 1) @@ fun x -> fib (n - 2) @@ fun y -> k @@ x +^ y) n k
+  else fib (n - 1) @@ fun x -> fib (n - 2) @@ fun y -> k @@ x +^ y)) Fun.id
 
-let%test_unit _ = ignore @@ List.init 1000000 @@ fun x -> fib x @@ fun y -> y
+let%test_unit _ = ignore @@ List.init 1000000 fib
