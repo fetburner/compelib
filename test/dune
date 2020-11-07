@@ -2,7 +2,8 @@
 (copy_files# containers/*.{ml,mli})
 
 (library
- (name compelib_test)
- (inline_tests)
- (libraries compelib)
- (preprocess (pps ppx_inline_test)))
+  (name compelib_test)
+  (inline_tests)
+  (libraries compelib)
+  (preprocess (pps ppx_inline_test))
+  (flags (:standard -warn-error -a)))
