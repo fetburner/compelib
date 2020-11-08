@@ -8,21 +8,28 @@ module F
     type t
     type elt
     type key = Weight.t
-    val take_min_binding : t -> (key * elt) option
+    type size
+    val make : size -> t
     val add : t -> key -> elt -> unit
+    val take_min_binding : t -> (key * elt) option
   end)
   (Array : sig
     type t
     type key = Heap.elt
     type elt = Heap.key
+    type size = Heap.size
+    val make : size -> t
     val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
 = struct
   type weight = Array.elt
   type vertex = Array.key
+  type vertices = Array.size
 
-  let shortest_path q d es s =
+  let shortest_path n es s =
+    let q = Heap.make n in
+    let d = Array.make n in
     (* 始点への経路長を0にする *)
     Array.set d s Weight.zero;
     (* 既に最短距離が確定した辺へのクエリを高速化するため，

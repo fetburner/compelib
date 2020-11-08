@@ -8,37 +8,44 @@ module F
   (* 経路長を優先度としたヒープの実装 *)
   (Heap : sig
     type t
-    type elt (* 頂点に相当 *)
+    type elt
     type key = Weight.t (* 経路長に相当 *)
-    (* ヒープが空ならNoneを，
-       そうでなければ経路長が最小となるbindingを返す
-       返したbindingはヒープから削除される *)
-    val take_min_binding : t -> (key * elt) option
-    (* ヒープにbindingを追加する
-       既に同じ頂点についてのbindingが追加されていたら，
+    type size
+
+    (* 空なヒープを作成する *)
+    val make : size -> t
+    (* ヒープに binding を追加する
+       既に同じ頂点についての binding が追加されていたら，
        経路長の短い方だけを残しても良いし，何も考えずに追加してもよい．
-       前者の実装ならダイクストラ法の実装が時間計算量O((V + E) log V)，
-       空間計算量O(V)に改善する *)
+       前者の実装ならダイクストラ法の実装が時間計算量 O((V + E) log V)，
+       空間計算量 O(V) に改善する *)
     val add : t -> key -> elt -> unit
+    (* ヒープが空なら None を，
+       そうでなければ経路長が最小となる binding を返す
+       返した binding はヒープから削除される *)
+    val take_min_binding : t -> (key * elt) option
   end)
   (* 頂点を添字，経路長を要素とした配列の実装 *)
   (Array : sig
     type t
     type key = Heap.elt
     type elt = Heap.key
+    type size = Heap.size
+
+    (* 全ての頂点についての経路長が無限大で初期化された配列を作る *)
+    val make : size -> t
     val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
 : sig
   type weight = Array.elt
   type vertex = Array.key
+  type vertices = Array.size
 
   (* ダイクストラ法で最短経路を求める関数 *)
   val shortest_path :
-    (* 空なヒープ *)
-    Heap.t ->
-    (* 全ての頂点についての経路長が無限大で初期化された配列 *)
-    Array.t ->
+    (* グラフに含まれる頂点の集合 *)
+    vertices ->
     (* 最短経路を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ *)
     (vertex -> (vertex -> (weight -> weight) (* 辺を通った際のコストを加算する関数 *) -> unit) -> unit) ->
     (* 始点 *)
