@@ -12,15 +12,15 @@ module IntMap = Map.Make (Int)
 module G = Compelib.Prim.F
   (struct
     type t = int
-    type v = int
-    type e = int
-    let empty = 0
-    let add = ( + )
-  end)
-  (struct
-    type t = int
     let zero = 0
     let compare = compare
+  end)
+  (struct
+    type t = int * int
+    type v = int
+    type w = int
+    let vertex = fst
+    let weight = snd
   end)
   (struct
     type t = (int * int) list IntMap.t ref
@@ -57,38 +57,27 @@ let es =
 
 let%test _ =
   G.minimum_spanning_tree 7
-    (fun u f -> List.iter (fun (v, w) -> f v w w) es.(u)) 0 = 39
+    (fun u f -> List.iter f es.(u)) 0 (fun (_, w) -> ( + ) w) 0 = 39
 
 (* 使った辺を列挙したい場合 *)
 
-module WeightedRoute = struct
-  (* 重みは同じでも違う頂点への辺を同一視されないようにする *)
-  type t = int * int * ((int * int * int) list -> (int * int * int) list)
-  let zero = (0, min_int, fun xs -> xs)
-  let ( + ) (w, _, f) (w', v, g) = (w + w', v, fun xs -> g (f xs))
-  let compare (w, u, _) (w', v, _) =
-    match compare w w' with
-    | 0 -> compare u v
-    | x -> x
-end
-
 module G' = Compelib.Prim.F
-  (struct
-    type t = (int * int * int) list
-    type v = int
-    type e = (int * int * int)
-    let empty = []
-    let add = List.cons
-  end)
   (struct
     type t = int
     let zero = 0
     let compare = compare
   end)
   (struct
-    type t = (int * (int * int * int)) list IntMap.t ref
+    type t = int * int * int
+    type v = int
+    type w = int
+    let vertex (_, v, _) = v
+    let weight (_, _, w) = w
+  end)
+  (struct
+    type t = (int * int * int) list IntMap.t ref
     type key = int
-    type elt = int * (int * int * int)
+    type elt = int * int * int
     type size = int
     let make _ = ref IntMap.empty
     let take_min_binding q =
@@ -111,7 +100,7 @@ module G' = Compelib.Prim.F
 
 let t =
   G'.minimum_spanning_tree 7
-    (fun u f -> List.iter (fun (v, w) -> f v w (u, v, w)) es.(u)) 0
+    (fun u f -> List.iter (fun (v, w) -> f (u, v, w)) es.(u)) 0 List.cons []
 
 let%test _ =
   List.sort_uniq compare t =

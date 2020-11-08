@@ -1,23 +1,23 @@
 module F
-  (Tree : sig
-    type t
-    type v
-    type e
-    val empty : t
-    val add : e -> t -> t
-  end)
   (* 辺の重み *)
   (Weight : sig
     type t
     val zero : t
     val compare : t -> t -> int
   end)
+  (Edge : sig
+    type t
+    type v
+    type w = Weight.t
+    val weight : t -> w
+    val vertex : t -> v
+  end)
   (* 辺の重みを優先度としたヒープの実装 *)
   (Heap : sig
     type t
     type size
-    type key = Weight.t (* 辺の重みに相当 *)
-    type elt = Tree.v * Tree.e (* 頂点に相当 *)
+    type key = Edge.w (* 辺の重みに相当 *)
+    type elt = Edge.t
     (* 空なヒープを作成する *)
     val make : size -> t
     (* ヒープが空ならNoneを，
@@ -34,8 +34,8 @@ module F
   (* 頂点を添字，辺の重みを要素とした配列の実装 *)
   (Array : sig
     type t
-    type key = Tree.v
-    type elt = Heap.key
+    type key = Edge.v
+    type elt = Edge.w
     type size = Heap.size
     (* 全ての頂点について無限大で初期化された配列を作る *)
     val make : size -> t
@@ -43,9 +43,8 @@ module F
     val set : t -> key -> elt -> unit
   end)
 : sig
-  type edge = Tree.e
-  type tree = Tree.t
-  type vertex = Tree.v
+  type edge = Edge.t
+  type vertex = Edge.v
   type weight = Weight.t
   type vertices = Array.size
 
@@ -54,9 +53,9 @@ module F
     (* グラフに含まれる頂点の集合 *)
     vertices ->
     (* 最小全域木を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ *)
-    (vertex -> (vertex -> weight -> edge -> unit) -> unit) ->
+    (vertex -> (edge -> unit) -> unit) ->
     (* 頂点の一つ（これは必ず最小全域木に含まれる） *)
     vertex ->
-    (* 最小全域木 *)
-    tree
+    (* 最小全域木に含まれる辺のリストについての畳み込み *)
+    (edge -> 'a -> 'a) -> 'a -> 'a
 end
