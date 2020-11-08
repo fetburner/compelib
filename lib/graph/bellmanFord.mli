@@ -8,14 +8,12 @@ module F
     val compare : t -> t -> int
   end) :
 sig
-  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
-
   val bellman_ford :
     (* 頂点数n *)
     int ->
-    (* 辺のリスト
+    (* 辺のリストについてのイテレータ
        頂点は0からn-1までの整数でなくてはならない *)
-    (int * int * Weight.t) church_list ->
+    ((int -> int -> Weight.t -> unit) -> unit) ->
     (* 始点 *)
     int ->
     (* 頂点を受け取り，そこまでの距離を返す関数
