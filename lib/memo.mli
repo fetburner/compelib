@@ -1,18 +1,24 @@
 module F
+  (Thunk : sig
+    type t
+    type elt
+    val value : elt -> t
+    val running : t
+    val case : t -> value:(elt -> 'a) -> pending:(unit -> 'a) -> running:(unit -> 'a) -> 'a
+  end)
   (Array : sig
     type t
     type key
-    type elt
+    type elt = Thunk.t
     type size
-    (* None で初期化された配列を作成する *)
+    (* Thunk.pending で初期化された配列を作成する *)
     val make : size -> t
-    val get : t -> key -> elt option
-    (* set a i x : 配列 a の i 番目の要素を Some x で更新する *)
+    val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
 : sig
   type dom = Array.key
-  type cod = Array.elt
+  type cod = Thunk.elt
   type size = Array.size
 
   (* メモ化付き不動点コンビネータ *)
