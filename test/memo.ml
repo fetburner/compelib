@@ -1,31 +1,51 @@
-module M = Compelib.Memo.F (struct
-  type t = int array
-  type key = int
-  type elt = int
-  type size = int
-  let make = Fun.flip Array.make (-1)
-  let get a i =
-    let x = a.(i) in
-    if x < 0 then None else Some x
-  let set = Array.set
-end)
+module M = Compelib.Memo.F
+  (struct
+    type t = int
+    type elt = int
+    let value = Fun.id
+    let running = -2
+    let case n ~value ~pending ~running =
+      match n with
+      | -1 -> pending ()
+      | -2 -> running ()
+      | n -> value n
+  end)
+  (struct
+    type t = int array
+    type key = int
+    type elt = int
+    type size = int
+    let make = Fun.flip Array.make (-1)
+    let get = Array.get
+    let set = Array.set
+  end)
 
 let fib = M.memoize 10 @@ fun fib n ->
   if n <= 1 then n else fib (n - 1) + fib (n - 2)
 
 let%test _ = List.init 10 fib = [0; 1; 1; 2; 3; 5; 8; 13; 21; 34]
 
-module N = Compelib.Memo.F (struct
-  type t = int array array
-  type key = int * int
-  type elt = int
-  type size = int * int
-  let make (n, m) = Array.make_matrix n m (-1)
-  let get a (i, j) =
-    let x = a.(i).(j) in
-    if x < 0 then None else Some x
-  let set a (i, j) x = a.(i).(j) <- x
-end)
+module N = Compelib.Memo.F
+  (struct
+    type t = int
+    type elt = int
+    let value = Fun.id
+    let running = -2
+    let case n ~value ~pending ~running =
+      match n with
+      | -1 -> pending ()
+      | -2 -> running ()
+      | n -> value n
+  end)
+  (struct
+    type t = int array array
+    type key = int * int
+    type elt = int
+    type size = int * int
+    let make (n, m) = Array.make_matrix n m (-1)
+    let get a (i, j) = a.(i).(j)
+    let set a (i, j) x = a.(i).(j) <- x
+  end)
 
 let routes = N.memoize (5, 5) @@ fun routes (n, m) ->
   if n = 0 || m = 0
