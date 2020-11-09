@@ -5,4 +5,8 @@
   (prelude bsearch)
   (extracted_modules bsearch))
 
+(coq.extraction
+  (prelude CycleDetection)
+  (extracted_modules cycleDetection))
+
 (library (name compelib))
