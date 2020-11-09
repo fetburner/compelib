@@ -48,6 +48,8 @@ let d =
 
 (* 経路復元を行う *)
 
+type 'a thunk = Running | Pending | Value of 'a
+
 module M = Compelib.PathReconstr.F (Int)
   (struct
     type t = int * int
@@ -65,13 +67,24 @@ module M = Compelib.PathReconstr.F (Int)
     let snoc p (v, _) = v :: p
   end)
   (struct
-    type t = int list option array
+    type t = int list thunk
+    type elt = int list
+    let value x = Value x
+    let running = Running
+    let case t ~value ~pending ~running =
+      match t with
+      | Value x -> value x
+      | Running -> running ()
+      | Pending -> pending ()
+  end)
+  (struct
+    type t = int list thunk array
     type size = int
     type key = int
-    type elt = int list
-    let make = Fun.flip Array.make None
+    type elt = int list thunk
+    let make = Fun.flip Array.make Pending
     let get = Array.get
-    let set a i x = a.(i) <- Some x
+    let set = Array.set
   end)
 
 let%test _ =

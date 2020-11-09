@@ -25,17 +25,23 @@ module F
     (* 集合に含まれる全ての経路の後端に辺を追加する *)
     val snoc : t -> edge -> t
   end)
-  (* 頂点を添字，Path.t option を要素とした配列の実装 *)
+  (Thunk : sig
+    type t
+    type elt = Path.t
+    val value : elt -> t
+    val running : t
+    val case : t -> value:(elt -> 'a) -> pending:(unit -> 'a) -> running:(unit -> 'a) -> 'a
+  end)
+  (* 頂点を添字，Thunk.t を要素とした配列の実装 *)
   (Array : sig
     type t
     type key = Edge.vertex
-    type elt = Path.t
+    type elt = Thunk.t
     type size
 
-    (* 全ての頂点について None で初期化された配列を作る *)
+    (* 全ての頂点について Thunk.pending で初期化された配列を作る *)
     val make : size -> t
-    val get : t -> key -> elt option
-    (* set a i x : 配列 a の i 番目の要素を Some x で更新する *)
+    val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
 : sig
@@ -45,8 +51,10 @@ module F
   type vertex = Edge.vertex
   type vertices = Array.size
 
+  exception ZeroCycle
+
   (* 最短経路の復元を行う
-     0辺だけの閉路があると無限ループに陥るので注意 *)
+     0辺だけの閉路があると ZeroCycle を投げる *)
   val path_reconstruction :
     (* グラフに含まれる頂点の集合 *)
     vertices ->
