@@ -25,7 +25,7 @@ module F
   type weight = Weight.t
   type vertices = Array.size
 
-  let bellman_ford n es s =
+  let shortest_path n es s =
     let es = List.sort (fun (u, v, _) (u', v', _) ->
       match Vertex.compare u v, Vertex.compare u' v' with
       (* 自己辺同士は始点の小さい順に緩和 *)

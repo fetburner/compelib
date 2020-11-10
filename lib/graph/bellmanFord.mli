@@ -28,7 +28,7 @@ sig
   type weight = Weight.t
   type vertices = Array.size
 
-  val bellman_ford :
+  val shortest_path :
     (* 頂点数n *)
     vertices ->
     (* 辺のリスト
