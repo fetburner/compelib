@@ -63,7 +63,7 @@ module M = Compelib.PathReconstr.F (Int)
     type edge = int * int
     let nil = []
     let empty = []
-    let join _ p = p
+    let join = Fun.const
     let snoc p (v, _) = v :: p
   end)
   (struct
@@ -94,5 +94,5 @@ let%test _ =
       e'.(v) <- (u, w) :: e'.(v))) e;
   ( = ) [[]; [0]; [0]; [2; 0]; [5; 2; 0]; [2; 0]] @@
   List.init 6 @@
-  M.path_reconstruction 6 (fun v f -> List.iter f e.(v)) 0 d
+  M.path_reconstruction 6 (fun v -> List.to_seq e.(v)) 0 d
 

@@ -20,8 +20,11 @@ module F
     val nil : t
     (* 空集合 *)
     val empty : t
-    (* 和集合 *)
-    val join : t -> t -> t
+    (* 和集合
+       最短経路を一つだけ求めれば良い場合は
+       let join = Fun.const
+       とすればよい *)
+    val join : t -> (unit -> t) -> t
     (* 集合に含まれる全ての経路の後端に辺を追加する *)
     val snoc : t -> edge -> t
   end)
@@ -58,8 +61,8 @@ module F
   val path_reconstruction :
     (* グラフに含まれる頂点の集合 *)
     vertices ->
-    (* 最短経路を求めたいグラフの，ある頂点``に''伸びる辺に対してのイテレータ *)
-    (vertex -> (edge -> unit) -> unit) ->
+    (* 最短経路を求めたいグラフの，ある頂点``に''伸びる辺のストリーム *)
+    (vertex -> edge Seq.t) ->
     (* 始点 *)
     vertex ->
     (* ある頂点への始点からの最短距離を返す関数 *)

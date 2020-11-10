@@ -15,7 +15,7 @@ module F
     type edge = Edge.t
     val nil : t
     val empty : t
-    val join : t -> t -> t
+    val join : t -> (unit -> t) -> t
     val snoc : t -> edge -> t
   end)
   (Thunk : sig
@@ -55,11 +55,14 @@ module F
         ~running:(fun () -> raise ZeroCycle)
         ~pending:(fun () ->
           Array.set ps v Thunk.running;
-          let p = ref Path.empty in
-          es v (fun e ->
-            let u = Edge.source e in
-            if Weight.equal (d v) (Edge.add_weight e (d u)) then
-              p := Path.join !p (Path.snoc (path u) e));
-          Array.set ps v (Thunk.value !p); !p) in
+          let rec fold = function
+            | Seq.Nil -> Path.empty
+            | Seq.Cons (e, es) ->
+                let u = Edge.source e in
+                if not (Weight.equal (d v) (Edge.add_weight e (d u)))
+                then fold @@ es ()
+                else Path.join (Path.snoc (path u) e) (fun () -> fold @@ es ()) in
+          let p = fold @@ es v () in
+          Array.set ps v (Thunk.value p); p) in
     path
 end
