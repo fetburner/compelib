@@ -33,7 +33,7 @@ module F
       (* 添字の小さい頂点から大きい頂点への辺同士は，始点の小さい順に緩和 *)
       | x, y when x < 0 && y < 0 -> Vertex.compare u u'
       (* 添字の大きい頂点から小さい頂点への辺同士は，始点の大きい順に緩和 *)
-      | x, y when x > 0 && y > 0 -> Vertex.compare u u'
+      | x, y when x > 0 && y > 0 -> Vertex.compare u' u
       (* 自己辺は添字の小さい頂点から大きい頂点への辺と一緒のタイミングで緩和する *)
       | 0, y when y < 0 ->
           begin match Vertex.compare u u' with
@@ -58,7 +58,7 @@ module F
     (* 残りの反復回数 *)
     let i = ref (Array.size_to_int n) in
     (* 負閉路とみなす閾値 *)
-    let th = succ @@ Array.size_to_int n lsr 1 in
+    let th = succ (Array.size_to_int n) lsr 1 in
     (* 更新が行われたか *)
     let is_modified = ref true in
     while 0 < !i && !is_modified do
