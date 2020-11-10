@@ -57,6 +57,7 @@ module F
     Array.set d s Weight.zero;
     (* 残りの反復回数 *)
     let i = ref (Array.size_to_int n) in
+    (* 負閉路とみなす閾値 *)
     let th = succ @@ Array.size_to_int n lsr 1 in
     (* 更新が行われたか *)
     let is_modified = ref true in
