@@ -6,24 +6,24 @@ module F
   end)
   (Edge : sig
     type t
-    type v
-    type w = Weight.t
-    val weight : t -> w
-    val vertex : t -> v
+    type vertex
+    type weight = Weight.t
+    val weight : t -> weight
+    val vertex : t -> vertex
   end)
   (Heap : sig
     type t
     type size
-    type key = Edge.w
     type elt = Edge.t
+    type key = Edge.weight
     val make : size -> t
     val add : t -> key -> elt -> unit
     val take_min_binding : t -> (key * elt) option
   end)
   (Array : sig
     type t
-    type key = Edge.v
-    type elt = Edge.w
+    type key = Edge.vertex
+    type elt = Edge.weight
     type size = Heap.size
     val make : size -> t
     val get : t -> key -> elt
@@ -31,8 +31,8 @@ module F
   end)
 = struct
   type edge = Edge.t
-  type vertex = Edge.v
-  type weight = Edge.w
+  type vertex = Edge.vertex
+  type weight = Edge.weight
   type vertices = Array.size
 
   let minimum_spanning_tree n es s f acc =
