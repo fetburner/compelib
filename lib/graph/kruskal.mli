@@ -5,15 +5,15 @@ module F
   end)
   (Edge : sig
     type t
-    type v
-    type w = Weight.t
-    val weight : t -> w
-    val vertex1 : t -> v
-    val vertex2 : t -> v
+    type vertex
+    type weight = Weight.t
+    val weight : t -> weight
+    val vertex1 : t -> vertex
+    val vertex2 : t -> vertex
   end)
   (Array : sig
     type 'a t
-    type key = Edge.v
+    type key = Edge.vertex
     type size
     val get : 'a t -> key -> 'a
     val init : size -> (key -> 'a) -> 'a t
@@ -24,7 +24,7 @@ module F
   type weight = Weight.t
   type vertex = Array.key
 
-  val kruskal :
+  val minimum_spanning_tree :
     (* 頂点の数n *)
     size ->
     (* 辺のリスト

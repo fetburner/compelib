@@ -5,15 +5,15 @@ module F
   end)
   (Edge : sig
     type t
-    type v
-    type w = Weight.t
-    val weight : t -> w
-    val vertex1 : t -> v
-    val vertex2 : t -> v
+    type vertex
+    type weight = Weight.t
+    val weight : t -> weight
+    val vertex1 : t -> vertex
+    val vertex2 : t -> vertex
   end)
   (Array : sig
     type 'a t
-    type key = Edge.v
+    type key = Edge.vertex
     type size
     val get : 'a t -> key -> 'a
     val init : size -> (key -> 'a) -> 'a t
@@ -29,7 +29,7 @@ module F
     let union _ _ = ()
   end)
 
-  let kruskal n es f acc =
+  let minimum_spanning_tree n es f acc =
     let uf = Array.init n @@ fun _ -> UF.make () in
     List.fold_left (fun acc e ->
       let uf_u = Array.get uf (Edge.vertex1 e) in
