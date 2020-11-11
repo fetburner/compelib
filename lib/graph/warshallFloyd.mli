@@ -1,43 +1,42 @@
 module F
+  (Vertex : sig
+    type t
+    type universe (* グラフに含まれる頂点の集合 *)
+    (* グラフに含まれる頂点についてのイテレータ *)
+    val universe_iter : (t -> unit) -> universe -> unit
+  end)
   (Weight : sig
     type t
-    val inf : t (* オーバーフローの恐れはないので，max_intとか突っ込んでも良い *)
     val zero : t
-    val neg_inf : t (* オーバーフローの恐れはないので，min_intとか突っ込んでも良い *)
+    (* 頂点 v に長さ w の自己辺があったとき， v を通る最短経路はどれだけ長くなるか
+       返り値は必ず0以下でなくてはならない *)
+    val self : t -> t
+    val min : t -> t -> t
     val ( + ) : t -> t -> t
-    val compare : t -> t -> int
+    val is_infinite : t -> bool (* 経路長が無限大かどうかの判定 *)
+  end)
+  (* n * n の2次配列の実装 *)
+  (SquareMatrix : sig
+    type t
+    type key = Vertex.t
+    type elt = Weight.t
+    type size = Vertex.universe
+    (* 全要素が無限大で初期化された， n * n の2次配列を作る *)
+    val make : size -> t
+    val get : t -> key -> key -> elt
+    val set : t -> key -> key -> elt -> unit
   end)
 : sig
-  type 'a church_list = { fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b }
+  type vertex = Vertex.t
+  type weight = Weight.t
+  type vertices = Vertex.universe
 
-  (* あまり行儀が良くない関数達 *)
-
-  (* 隣接行列を作る関数 *)
-  val make_adjmatrix :
+  val shortest_path :
     (* 頂点の数n *)
-    int ->
-    (* 辺のリスト
-       頂点は0からn-1までの整数でなくてはならない *)
-    (int * int * Weight.t) church_list ->
-    (* 隣接行列 *)
-    Weight.t array array
-
-  val raw_warshall_floyd :
-    (* 頂点の数n *)
-    int ->
-    (* 隣接行列 *)
-    Weight.t array array ->
-    (* 隣接行列に上書きして，各頂点間の最短距離を格納する *)
-    unit
-
-  (* 行儀の良い関数 *)
-
-  val warshall_floyd :
-    (* 頂点の数n *)
-    int ->
-    (* 辺のリスト
-       頂点は0からn-1までの整数でなくてはならない *)
-    (int * int * Weight.t) church_list ->
-    (* 辿り着けなければinf，負閉路を含む経路があればneg_infを返す関数 *)
-    (int -> int -> Weight.t)
+    vertices ->
+    (* 辺についてのイテレータ *)
+    ((vertex -> vertex -> weight -> unit) -> unit) ->
+    (* 始点と終点を受け取って，辿り着けるならば最短距離を，
+       辿り着けなければ無限大を返す関数 *)
+    (vertex -> vertex -> weight)
 end
