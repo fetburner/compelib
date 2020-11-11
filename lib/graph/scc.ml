@@ -1,21 +1,21 @@
 module F
   (Vertex : sig
     type t
-    type u
-    val fold : (t -> 'a -> 'a) -> u -> 'a -> 'a
+    type universe
+    val universe_fold : (t -> 'a -> 'a) -> universe -> 'a -> 'a
   end)
   (Array : sig
     type t
     type elt = bool
     type key = Vertex.t
-    type size = Vertex.u
+    type size = Vertex.universe
     val make : size -> t
     val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
 = struct
   type vertex = Vertex.t
-  type vertices = Vertex.u
+  type vertices = Vertex.universe
 
   let rec visit es vs v l =
     if Array.get vs v
@@ -24,7 +24,7 @@ module F
 
   let sort n es =
     let vs = Array.make n in
-    Vertex.fold (visit es vs) n []
+    Vertex.universe_fold (visit es vs) n []
 
   let scc n es =
     let vs = Array.make n in

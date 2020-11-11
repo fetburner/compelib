@@ -2,16 +2,16 @@ module F
   (Vertex : sig
     type t
     (* グラフに含まれる頂点の集合 *)
-    type u
+    type universe
     (* グラフに含まれる頂点の集合に対するfold *)
-    val fold : (t -> 'a -> 'a) -> u -> 'a -> 'a
+    val universe_fold : (t -> 'a -> 'a) -> universe -> 'a -> 'a
   end)
   (* 頂点を添字，真偽値を要素とした配列の実装 *)
   (Array : sig
     type t
     type elt = bool
     type key = Vertex.t
-    type size = Vertex.u
+    type size = Vertex.universe
     (* falseで初期化された配列を作成する *)
     val make : size -> t
     val get : t -> key -> elt
@@ -19,7 +19,7 @@ module F
   end)
 : sig
   type vertex = Vertex.t
-  type vertices = Vertex.u
+  type vertices = Vertex.universe
   
   (* トポロジカルソート *)
   val sort :
