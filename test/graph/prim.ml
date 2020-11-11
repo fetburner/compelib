@@ -17,8 +17,8 @@ module G = Compelib.Prim.F
   end)
   (struct
     type t = int * int
-    type v = int
-    type w = int
+    type vertex = int
+    type weight = int
     let vertex = fst
     let weight = snd
   end)
@@ -69,8 +69,8 @@ module G' = Compelib.Prim.F
   end)
   (struct
     type t = int * int * int
-    type v = int
-    type w = int
+    type vertex = int
+    type weight = int
     let vertex (_, v, _) = v
     let weight (_, _, w) = w
   end)

@@ -5,8 +5,8 @@ module G = Compelib.Kruskal.F
   end)
   (struct
     type t = int * int * int
-    type v = int
-    type w = int
+    type vertex = int
+    type weight = int
     let vertex1 (u, _, _) = u
     let vertex2 (_, v, _) = v
     let weight (_, _, w) = w
@@ -18,7 +18,7 @@ module G = Compelib.Kruskal.F
   end)
 
 let%test _ =
-  List.sort compare (G.kruskal 7
+  List.sort compare (G.minimum_spanning_tree 7
     [(0, 1, 7); (0, 3, 5);
      (1, 0, 7); (1, 2, 8); (1, 3, 9); (1, 4, 7);
      (2, 1, 8); (2, 4, 5);

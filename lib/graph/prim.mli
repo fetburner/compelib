@@ -7,17 +7,17 @@ module F
   end)
   (Edge : sig
     type t
-    type v
-    type w = Weight.t
-    val weight : t -> w
-    val vertex : t -> v
+    type vertex
+    type weight = Weight.t
+    val weight : t -> weight
+    val vertex : t -> vertex
   end)
   (* 辺の重みを優先度としたヒープの実装 *)
   (Heap : sig
     type t
     type size
-    type key = Edge.w (* 辺の重みに相当 *)
     type elt = Edge.t
+    type key = Edge.weight (* 辺の重みに相当 *)
     (* 空なヒープを作成する *)
     val make : size -> t
     (* ヒープが空ならNoneを，
@@ -34,8 +34,8 @@ module F
   (* 頂点を添字，辺の重みを要素とした配列の実装 *)
   (Array : sig
     type t
-    type key = Edge.v
-    type elt = Edge.w
+    type key = Edge.vertex
+    type elt = Edge.weight
     type size = Heap.size
     (* 全ての頂点について無限大で初期化された配列を作る *)
     val make : size -> t
@@ -44,7 +44,7 @@ module F
   end)
 : sig
   type edge = Edge.t
-  type vertex = Edge.v
+  type vertex = Edge.vertex
   type weight = Weight.t
   type vertices = Array.size
 

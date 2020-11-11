@@ -3,11 +3,11 @@
 module IntG = Compelib.Scc.F
   (struct
     type t = int
-    type u = int
-    let rec fold f n acc =
+    type universe = int
+    let rec universe_fold f n acc =
       if n = 0
       then acc
-      else fold f (n - 1) (f n acc)
+      else universe_fold f (n - 1) (f n acc)
   end)
   (struct
     type t = bool array
