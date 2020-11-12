@@ -1,46 +1,35 @@
 module F
-  (Vertex : sig
+  (Vertices : sig
     type t
-    type universe
-    val universe_iter : (t -> unit) -> universe -> unit
+    type vertex
+    val iter : (vertex -> unit) -> t -> unit
   end)
   (Weight : sig
     type t
-    val zero : t
-    val self : t -> t
     val min : t -> t -> t
     val ( + ) : t -> t -> t
-    val is_infinite : t -> bool
+    val is_finite : t -> bool
   end)
   (SquareMatrix : sig
     type t
-    type key = Vertex.t
     type elt = Weight.t
-    type size = Vertex.universe
-    val make : size -> t
+    type key = Vertices.vertex
     val get : t -> key -> key -> elt
     val set : t -> key -> key -> elt -> unit
   end)
 = struct
-  type vertex = Vertex.t
+  type vertex = Vertices.vertex
   type weight = Weight.t
-  type vertices = Vertex.universe
+  type vertices = Vertices.t
+  type adjacency_matrix = SquareMatrix.t
 
-  let shortest_path n es =
-    let d = SquareMatrix.make n in
-    Vertex.universe_iter (fun u ->
-      SquareMatrix.set d u u Weight.zero) n;
-    es (fun u v c -> SquareMatrix.set d u v @@ min c @@ SquareMatrix.get d u v);
-    Vertex.universe_iter (fun i ->
-      let dii = Weight.self @@ SquareMatrix.get d i i in
-      Vertex.universe_iter (fun j ->
+  let shortest_path n d =
+    Fun.flip Vertices.iter n @@ fun i ->
+      Fun.flip Vertices.iter n @@ fun j ->
         let dji = SquareMatrix.get d j i in
-        if not (Weight.is_infinite dji) then
-          let open Weight in
-          let dji = dji + dii in
-          Vertex.universe_iter (fun k ->
-            let dik = SquareMatrix.get d i k in
-            if not (Weight.is_infinite dik) then
-              SquareMatrix.set d j k @@ min (dji + dik) @@ SquareMatrix.get d j k) n) n) n;
-    SquareMatrix.get d
+        Fun.flip Vertices.iter n @@ fun k ->
+          let dik = SquareMatrix.get d i k in
+          if Weight.is_finite dji && Weight.is_finite dik then
+            let open Weight in
+            SquareMatrix.set d j k @@ min (dji + dik) @@ SquareMatrix.get d j k
 end
