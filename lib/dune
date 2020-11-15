@@ -2,7 +2,7 @@
 (copy_files# containers/*.{ml,mli})
 
 (coq.extraction
-  (prelude bsearch)
+  (prelude Bsearch)
   (extracted_modules bsearch))
 
 (coq.extraction
