@@ -9,4 +9,8 @@
   (prelude CycleDetection)
   (extracted_modules cycleDetection))
 
+(coq.extraction
+  (prelude Regexp)
+  (extracted_modules regexp))
+
 (library (name compelib))
