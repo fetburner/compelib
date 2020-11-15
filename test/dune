@@ -1,5 +1,5 @@
 (copy_files# graph/*.{ml,mli})
-(copy_files# containers/*.{ml,mli})
+(copy_files# container/*.{ml,mli})
 
 (library
   (name compelib_test)
