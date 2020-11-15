@@ -2,14 +2,18 @@ module F
   (Array : sig
     type t
     type key
+    type size
     type elt = int
+    val make : size -> t
     val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
 = struct
   type vertex = Array.key
+  type vertices = Array.size
 
-  let shortest_path d es s =
+  let shortest_path n es s =
+    let d = Array.make n in
     (* 始点への経路長を0にする *)
     Array.set d s 0;
     let w = ref 1 in

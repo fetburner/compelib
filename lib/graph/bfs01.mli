@@ -4,15 +4,18 @@ module F
     type t
     type key
     type elt = int (* 全ての重さが0か1なグラフなので経路長は非負整数 *)
+    type size (* 頂点数 *)
+    val make : size -> t (* 全ての頂点についての経路長が無限大で初期化された配列を作る *)
     val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
 : sig
   type vertex = Array.key
+  type vertices = Array.size
 
   val shortest_path :
-    (* 全ての頂点についての経路長が無限大で初期化された配列 *)
-    Array.t ->
+    (* 頂点数 *)
+    vertices ->
     (* 最短経路を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ
        重みが0の辺に対してはf0を，1の辺に対してはf1を用いる *)
     (vertex -> f0:(vertex -> unit) -> f1:(vertex -> unit) -> unit) ->

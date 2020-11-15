@@ -12,6 +12,8 @@ module F
     type t = int array
     type key = int
     type elt = int
+    type size = int
+    let make = Fun.flip Array.make max_int
     let get = Array.get
     let set = Array.set
   end)
@@ -52,10 +54,8 @@ module F
             end in
       find () in
 
-    let a = Array.make n max_int in
     let rec outer flow =
-      Array.fill a 0 n max_int;
-      let level = G.shortest_path a (fun v f ->
+      let level = G.shortest_path n (fun v f ->
         List.iter (fun e ->
           if 0 < Flow.compare e.capacity Flow.zero then f e.to_) adj.(v)) s in
       if max_int <= level t
