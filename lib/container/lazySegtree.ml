@@ -15,7 +15,7 @@ module Make
   type elt = S.t
   type map = F.t
 
-  (* 遅延セグ木の遅延評価に関する処理を隠蔽するため、 *)
+  (* 遅延セグ木の遅延評価に関する処理を隠蔽するため、モジュールで包んでおく *)
   module Node
   : sig
     type t
@@ -30,21 +30,24 @@ module Make
        mutable だけど遅延していた計算結果の保存にしか使わないこと *)
     type t = { mutable data : elt; mutable pending : map; child : (t * t) option }
 
+    let force t =
+      Option.iter (fun (t1, t2) ->
+        t1.pending <- F.comp t.pending t1.pending;
+        t2.pending <- F.comp t.pending t2.pending) t.child;
+      t.data <- F.apply t.pending t.data;
+      t.pending <- F.id
+
     let leaf data = { data; pending = F.id; child = None }
     let make left right =
+      force left;
+      force right;
       { data = S.op left.data right.data;
         pending = F.id;
         child = Some (left, right) }
 
     let apply f t = { t with pending = F.comp f t.pending }
 
-    let force t k =
-      Option.iter (fun (t1, t2) ->
-        t1.pending <- F.comp t.pending t1.pending;
-        t2.pending <- F.comp t.pending t2.pending) t.child;
-      t.data <- F.apply t.pending t.data;
-      t.pending <- F.id;
-      k t.data t.child
+    let force t k = force t; k t.data t.child
   end
 
   type t = { size : int; node : Node.t }
