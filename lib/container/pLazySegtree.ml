@@ -59,7 +59,8 @@ module F
           node data left right
   end
 
-  include (PSegtreeCommon.F (S) (Node))
+  module Common = PSegtreeCommon.F (S) (Node)
+  include Common
 
   let rec update_range n l r f t =
     Node.case t
