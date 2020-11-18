@@ -15,39 +15,41 @@ module Make
   type elt = S.t
   type map = F.t
 
-  (* 遅延セグ木の遅延評価に関する処理を隠蔽するため、モジュールで包んでおく *)
+  (* 遅延セグ木の遅延評価に関する処理を隠蔽するため，モジュールで包んでおく *)
   module Node
   : sig
     type t
+    type thunk
     val leaf : elt -> t
     val make : t -> t -> t
-    val apply : map -> t -> t
-    val force : t -> (elt -> (t * t) option -> 'a) -> 'a
+    val force : thunk -> t
+    val apply : map -> t -> thunk
+    val case : t -> (elt -> (thunk * thunk) option -> 'a) -> 'a
   end
   = struct
     (* data は要素すべてをモノイドの演算で畳み込んだもの
        pending は適用されていない写像
        mutable だけど遅延していた計算結果の保存にしか使わないこと *)
-    type t = { mutable data : elt; mutable pending : map; child : (t * t) option }
+    type thunk = { mutable data : elt; mutable pending : map; child : (thunk * thunk) option }
+    (* thunk のうち，pending が F.id のもの *)
+    type t = thunk
+
+    let leaf data = { data; pending = F.id; child = None }
+    let make left right =
+      { data = S.op left.data right.data;
+        pending = F.id;
+        child = Some (left, right) }
 
     let force t =
       Option.iter (fun (t1, t2) ->
         t1.pending <- F.comp t.pending t1.pending;
         t2.pending <- F.comp t.pending t2.pending) t.child;
       t.data <- F.apply t.pending t.data;
-      t.pending <- F.id
+      t.pending <- F.id; t
 
-    let leaf data = { data; pending = F.id; child = None }
-    let make left right =
-      force left;
-      force right;
-      { data = S.op left.data right.data;
-        pending = F.id;
-        child = Some (left, right) }
+    let apply f t = { t with pending = f }
 
-    let apply f t = { t with pending = F.comp f t.pending }
-
-    let force t k = force t; k t.data t.child
+    let case t k = k t.data t.child
   end
 
   type t = { size : int; node : Node.t }
@@ -76,44 +78,44 @@ module Make
     { size = n; node = init 0 f n }
 
   let rec update n i f t =
-    Node.force t @@ fun data -> function
+    Node.case t @@ fun data -> function
       | None -> Node.leaf (f data)
       | Some (left, right) ->
           if i < lsize n
-          then Node.make (update (lsize n) i f left) right
-          else Node.make left (update (rsize n) (i - lsize n) f right)
+          then Node.make (update (lsize n) i f (Node.force left)) (Node.force right)
+          else Node.make (Node.force left) (update (rsize n) (i - lsize n) f (Node.force right))
   let update i f t =
     assert (0 <= i && i < t.size);
     { t with node = update t.size i f t.node }
 
   let rec update_range n l r f t =
-    if l <= 0 && n <= r
-    then Node.apply f t
-    else Node.force t @@ fun _ -> function
-      | None -> failwith "update_range"
+    Node.case t @@ fun data -> function
+      | None -> Node.leaf (F.apply f data)
       | Some (left, right) ->
-          if r <= lsize n
-          then Node.make (update_range (lsize n) l r f left) right
+          if l <= 0 && n <= r
+          then Node.force (Node.apply f t)
+          else if r <= lsize n
+          then Node.make (update_range (lsize n) l r f (Node.force left)) (Node.force right)
           else if lsize n <= l
-          then Node.make left (update_range (rsize n) (l - lsize n) (r - lsize n) f right)
+          then Node.make (Node.force left) (update_range (rsize n) (l - lsize n) (r - lsize n) f (Node.force right))
           else Node.make
-                 (update_range (lsize n) l (lsize n) f left)
-                 (update_range (rsize n) 0 (r - lsize n) f right)
+                 (update_range (lsize n) l (lsize n) f (Node.force left))
+                 (update_range (rsize n) 0 (r - lsize n) f (Node.force right))
   let update_range l r f t =
     assert (0 <= l && l < r && r <= t.size);
     { t with node = update_range t.size l r f t.node }
 
   let rec query n l r t =
-    Node.force t @@ fun data -> function
+    Node.case t @@ fun data -> function
       | None -> data
       | Some (left, right) ->
           if l <= 0 && n <= r
           then data
           else if r <= lsize n
-          then query (lsize n) l r left
+          then query (lsize n) l r (Node.force left)
           else if lsize n <= l
-          then query (rsize n) (l - lsize n) (r - lsize n) right
-          else S.op (query (lsize n) l (lsize n) left) (query (rsize n) 0 (r - lsize n) right)
+          then query (rsize n) (l - lsize n) (r - lsize n) (Node.force right)
+          else S.op (query (lsize n) l (lsize n) (Node.force left)) (query (rsize n) 0 (r - lsize n) (Node.force right))
   let query l r t =
     assert (0 <= l && l < r && r <= t.size);
     query t.size l r t.node
