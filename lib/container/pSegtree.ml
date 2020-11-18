@@ -125,29 +125,34 @@ module LazyF
        pending は子孫のノードに適用されていない写像
        mutable だけど遅延していた計算結果の保存にしか使わないこと *)
     type elt = S.t
-    type t = { mutable data : elt; mutable pending : map; child : (t * t) option }
+    type t =
+      | Leaf of { mutable data : elt }
+      | Node of { mutable data : elt; mutable pending : map; left : t; right : t }
 
-    let leaf data = { data; pending = F.id; child = None }
+    let data = function
+      | Leaf { data = x } -> x
+      | Node { data = x; _ } -> x
+
+    let leaf data = Leaf { data }
     let make left right =
-      { data = S.op left.data right.data;
-        pending = F.id;
-        child = Some (left, right) }
+      Node { data = S.op (data left) (data right); pending = F.id; left; right }
 
-    let propagate f t =
-      t.data <- F.apply f t.data;
-      t.pending <- F.comp f t.pending
+    let propagate f = function
+      | Leaf r -> r.data <- F.apply f r.data
+      | Node r -> r.data <- F.apply f r.data; r.pending <- F.comp f r.pending
 
-    let apply f t =
-      { t with data = F.apply f t.data; pending = F.comp f t.pending }
+    let apply f = function
+      | Leaf { data } -> Leaf { data = F.apply f data }
+      | Node ({ data; pending; _ } as r) -> Node { r with data = F.apply f data; pending = F.comp f pending }
 
     let case t leaf node =
-      match t.child with
-      | None -> leaf t.data
-      | Some (left, right) ->
-          propagate t.pending left;
-          propagate t.pending right;
-          t.pending <- F.id;
-          node t.data left right
+      match t with
+      | Leaf { data } -> leaf data
+      | Node ({ data; pending; left; right } as r) ->
+          propagate pending left;
+          propagate pending right;
+          r.pending <- F.id;
+          node data left right
   end
 
   include (Common (S) (Node))
