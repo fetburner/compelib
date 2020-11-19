@@ -12,13 +12,17 @@ module F
     val apply : t -> dom -> cod
   end)
 = struct
+  type elt = S.t
   type map = F.t
+
+  let lsize n = n lsr 1
+  let rsize n = (n + 1) lsr 1
 
   (* 遅延セグ木の遅延評価に関する処理を隠蔽するため，モジュールで包んでおく *)
   module Node
   : sig
     type t
-    type elt = S.t
+    type nonrec elt = elt
     val leaf : elt -> t
     val make : t -> t -> t
     val apply : map -> t -> t
@@ -28,7 +32,7 @@ module F
     (* data は要素すべてをモノイドの演算で畳み込んだもの
        pending は子孫のノードに適用されていない写像
        mutable だけど遅延していた計算結果の保存にしか使わないこと *)
-    type elt = S.t
+    type nonrec elt = elt
     type t =
       | Leaf of { mutable data : elt }
       | Node of { mutable data : elt; mutable pending : map; left : t; right : t }
@@ -59,8 +63,40 @@ module F
           node data left right
   end
 
-  module Common = PSegtreeCommon.F (S) (Node)
-  include Common
+  module Tree = struct
+    type t = { size : int; node : Node.t }
+    type nonrec elt = elt
+
+    let size t = t.size
+    let leaf x = { size = 1; node = Node.leaf x }
+    let make l r = { size = l.size + r.size; node = Node.make l.node r.node }
+
+    let case t leaf node =
+      Node.case t.node leaf (fun x l r ->
+        node t.size x
+          { size = lsize t.size; node = l }
+          { size = rsize t.size; node = r })
+  end
+
+  type t = Tree.t
+
+  module Gen = PSegtreeGen.F (struct
+    include Node
+    let lsize = lsize
+    let rsize = rsize
+  end)
+
+  let of_list l =
+    let n = List.length l in
+    { Tree.size = n; Tree.node = Gen.of_list l n }
+
+  let init n f = { Tree.size = n; Tree.node = Gen.init n f }
+
+  module Query = PSegtreeQuery.F (S) (Tree)
+  include Query
+
+  module Update = PSegtreeUpdate.F (Tree)
+  include Update
 
   let rec update_range n l r f t =
     Node.case t
@@ -76,6 +112,6 @@ module F
           (update_range (lsize n) l (lsize n) f left)
           (update_range (rsize n) 0 (r - lsize n) f right))
   let update_range l r f t =
-    assert (0 <= l && l < r && r <= t.size);
-    { t with node = update_range t.size l r f t.node }
+    assert (0 <= l && l < r && r <= t.Tree.size);
+    { t with Tree.node = update_range t.size l r f t.node }
 end
