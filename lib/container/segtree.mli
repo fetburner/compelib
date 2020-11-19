@@ -6,7 +6,7 @@ module F
   end)
 : sig
   type t
-  type elt = S.t
+  type elt = M.t
 
   (* 与えられたリストの要素からなるセグ木を作る *)
   val of_list : elt list -> t
