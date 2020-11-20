@@ -48,14 +48,6 @@ module F
         query_aux (l lsr 1) (r lsr 1) sml smr in
     query_aux (l + t.size) (r + t.size) M.e M.e
 
-  let set i x t =
-    assert (0 <= i && i < t.n);
-    let i = i + t.size in
-    t.d.(i) <- x;
-    for j = 1 to t.log do
-      update t.d (i lsr j)
-    done
-
   let update i f t =
     assert (0 <= i && i < t.n);
     let i = i + t.size in
@@ -63,4 +55,6 @@ module F
     for j = 1 to t.log do
       update t.d (i lsr j)
     done
+
+  let set i x = update i @@ Fun.const x
 end
