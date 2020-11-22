@@ -1,3 +1,4 @@
+(copy_files# tree/*.{ml,mli})
 (copy_files# graph/*.{ml,mli})
 (copy_files# container/*.{ml,mli})
 
