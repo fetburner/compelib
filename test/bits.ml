@@ -12,3 +12,9 @@ let%test _ =
     let log = Compelib.Bits.ceil_log2 n in
     1 lsl (log - 1) < n && n <= 1 lsl log) @@
   List.init 100000 succ
+
+let%test _ =
+  List.for_all (fun n ->
+    let log = Compelib.Bits.floor_log2 n in
+    1 lsl log <= n && n < 1 lsl (log + 1)) @@ 
+  List.init 100000 succ

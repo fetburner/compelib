@@ -15,3 +15,12 @@ let ceil_log2 x =
   let x = x lor (x lsr 16) in
   let x = x lor (x lsr 32) in
   popcnt x
+
+let floor_log2 x =
+  let x = x lor (x lsr 1) in
+  let x = x lor (x lsr 2) in
+  let x = x lor (x lsr 4) in
+  let x = x lor (x lsr 8) in
+  let x = x lor (x lsr 16) in
+  let x = x lor (x lsr 32) in
+  popcnt x - 1
