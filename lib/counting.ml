@@ -17,7 +17,7 @@ module F
       if k <= i
       then nCi
       else let open Int in comb_aux (nCi * of_int (n - i) / of_int (i + 1)) k (i + 1) in
-    comb_aux (Int.of_int 1) (min k (n - k)) 0
+    if k < 0 || n < k then Int.of_int 0 else comb_aux (Int.of_int 1) (min k (n - k)) 0
 
   let comb_memo n =
     let i = ref 0 in
@@ -35,5 +35,5 @@ module F
         a.(!i) <- a.(!i - 1) * of_int (n - !i + 1) / of_int !i;
         comb_memo_aux k
       end in
-    fun k -> comb_memo_aux @@ min k @@ n - k
+    fun k -> if k < 0 || n < k then Int.of_int 0 else comb_memo_aux @@ min k @@ n - k
 end
