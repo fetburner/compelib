@@ -6,9 +6,11 @@ module F
     val ( / ) : t -> t -> t
   end)
 = struct
-  let perm n k =
-    Array.fold_left Int.( * ) (Int.of_int 1) @@
-    Array.init k @@ fun i -> Int.of_int @@ n - k + 1 + i
+  let rec perm acc n k =
+    if k <= 0
+    then acc
+    else perm (let open Int in acc * of_int n) (n - 1) (k - 1)
+  let perm n k = if k < 0 || n < k then Int.of_int 0 else perm (Int.of_int 1) n k
 
   let comb n k =
     let rec comb_aux nCi k i =
