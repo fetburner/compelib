@@ -6,6 +6,16 @@ module F
     val ( / ) : t -> t -> t
   end)
 : sig
+  (* intと準同型な体の上で順列の数nPkを計算する関数
+     時間計算量はO(k)，空間計算量はO(k) *)
+  val perm :
+    (* 全体の数n *)
+    int ->
+    (* 選ぶ個数k *)
+    int ->
+    (* 順列の数nCk *)
+    Int.t
+
   (* intと準同型な体の上で組み合わせの数nCkを計算する関数
      時間計算量はO(k)，空間計算量はO(1) *)
   val comb :
