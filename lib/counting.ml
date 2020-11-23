@@ -36,4 +36,6 @@ module F
         comb_memo_aux k
       end in
     fun k -> if k < 0 || n < k then Int.of_int 0 else comb_memo_aux @@ min k @@ n - k
+
+  let repcomb n k = comb (n + k - 1) k
 end
