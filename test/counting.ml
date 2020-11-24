@@ -7,7 +7,9 @@ end)
 
 (* その昔AtCoderのOCaml処理系のintが31ビットしか無かった頃，
    よく答えがintの範囲に収まらなくてint64で計算をしたものだなぁ（しみじみ） *)
+let%test "4P2 in int64" = M64.perm 4 2 = 12L
 let%test "4C2 in int64" = M64.comb 4 2 = 6L
+let%test "10P3 in int64" = M64.perm 10 3 = 720L
 let%test "10C3 in int64" = M64.comb 10 3 = 120L
 let%test "4C2 in int64 (memoized ver)" = M64.comb_memo 4 2 = 6L
 let%test "10C3 in int64 (memoized ver)" = M64.comb_memo 10 3 = 120L
@@ -21,7 +23,9 @@ module Mmod = Compelib.Counting.F (struct
   let ( / ) x y = Compelib.Misc.power ( * ) x y (m - 2) (* フェルマーの小定理 *)
 end)
 
+let%test "4P2 mod prime" = Mmod.perm 4 2 = 12
 let%test "4C2 mod prime" = Mmod.comb 4 2 = 6
+let%test "10P3 in int64" = M64.perm 10 3 = 720L
 let%test "10C3 mod prime" = Mmod.comb 10 3 = 120
 let%test "100000C1000 mod prime" = 0 <= Mmod.comb 100000 1000
 let%test "4C2 mod prime (memoized ver)" = Mmod.comb_memo 4 2 = 6
