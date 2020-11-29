@@ -7,13 +7,12 @@ license: "MIT"
 homepage: "https://github.com/fetburner/compelib"
 bug-reports: "https://github.com/fetburner/compelib/issues"
 depends: [
-  "dune" {>= "2.7"}
+  "dune" {>= "2.5"}
   "coq" {>= "8.10"}
   "ppx_inline_test" {>= "0.14.1"}
-  "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {dev}
+  ["dune" "subst"] {pinned}
   [
     "dune"
     "build"
