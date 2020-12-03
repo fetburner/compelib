@@ -10,13 +10,11 @@ Module F (C : Char).
 
   CoInductive t : Set :=
     | empty_set
-    | universal_set
     | regexp (is_nullable : bool) (derive : character -> t).
 
   Definition frob t :=
     match t with
     | empty_set => empty_set
-    | universal_set => universal_set
     | regexp is_nullable derive => regexp is_nullable derive
     end.
 
@@ -26,7 +24,6 @@ Module F (C : Char).
   Fixpoint matches re s :=
     match re, s with
     | empty_set, _ => false
-    | universal_set, _ => true
     | regexp is_nullable _, nil => is_nullable
     | regexp _ derive, c :: s => matches (derive c) s
     end.
@@ -34,7 +31,6 @@ Module F (C : Char).
   Definition is_nullable re :=
     match re with
     | empty_set => false
-    | universal_set => true
     | regexp is_nullable _ => is_nullable
     end.
 
@@ -44,7 +40,6 @@ Module F (C : Char).
   Definition derive re :=
     match re with
     | empty_set => fun _ => empty_set
-    | universal_set => fun _ => universal_set
     | regexp _ derive => derive
     end.
 
@@ -52,9 +47,6 @@ Module F (C : Char).
   Proof. by case => //= ? []. Qed.
 
   Lemma empty_set_spec : forall s, ~~ matches empty_set s.
-  Proof. by case. Qed.
-
-  Lemma universal_set_spec : forall s, matches universal_set s.
   Proof. by case. Qed.
 
   Definition empty_str := regexp true (fun _ => empty_set).
@@ -83,34 +75,10 @@ Module F (C : Char).
       by inversion 1; subst.
   Qed.
 
-  CoFixpoint neg re :=
-    match re with
-    | empty_set => universal_set
-    | universal_set => empty_set
-    | regexp is_nullable derive => regexp (~~ is_nullable) (fun c => neg (derive c))
-    end.
-
-  Lemma neg_eq re : neg re =
-    match re with
-    | empty_set => universal_set
-    | universal_set => empty_set
-    | regexp is_nullable derive => regexp (~~ is_nullable) (fun c => neg (derive c))
-    end.
-  Proof.
-    rewrite (frob_eq (neg re)).
-    by case re.
-  Qed.
-
-  Lemma neg_spec : forall s re,
-    matches (neg re) s = ~~ matches re s.
-  Proof. by elim => [ | ? ? ? ] [ | | ? ? ] /=. Qed.
-
   CoFixpoint inter re re' :=
     match re, re' with
     | empty_set, _ => empty_set
-    | universal_set, _ => re'
     | _, empty_set => empty_set
-    | _, universal_set => re
     | regexp is_nullable derive, regexp is_nullable' derive' =>
       regexp (is_nullable && is_nullable') (fun c => inter (derive c) (derive' c))
     end.
@@ -118,30 +86,26 @@ Module F (C : Char).
   Lemma inter_eq re re' : inter re re' =
     match re, re' with
     | empty_set, _ => empty_set
-    | universal_set, _ => re'
     | _, empty_set => empty_set
-    | _, universal_set => re
     | regexp is_nullable derive, regexp is_nullable' derive' =>
       regexp (is_nullable && is_nullable') (fun c => inter (derive c) (derive' c))
     end.
   Proof.
     rewrite (frob_eq (inter re re')).
-    by move: re re' => [ | | ? ? ] [ | | ? ? ] /=.
+    by move: re re' => [ | ? ? ] [ | ? ? ] /=.
   Qed.
 
   Lemma inter_spec : forall s re re',
     matches (inter re re') s = matches re s && matches re' s.
   Proof.
-    elim => [ | ? ? ? ] [ | | ? ? ] [ | | ? ? ] //=;
+    elim => [ | ? ? ? ] [ | ? ? ] [ | ? ? ] //=;
     by rewrite ?andbT ?andbF.
   Qed.
 
   CoFixpoint union re re' :=
     match re, re' with
     | empty_set, _ => re'
-    | universal_set, _ => universal_set
     | _, empty_set => re
-    | _, universal_set => universal_set
     | regexp is_nullable derive, regexp is_nullable' derive' =>
       regexp (is_nullable || is_nullable') (fun c => union (derive c) (derive' c))
     end.
@@ -149,57 +113,47 @@ Module F (C : Char).
   Lemma union_eq re re' : union re re' =
     match re, re' with
     | empty_set, _ => re'
-    | universal_set, _ => universal_set
     | _, empty_set => re
-    | _, universal_set => universal_set
     | regexp is_nullable derive, regexp is_nullable' derive' =>
       regexp (is_nullable || is_nullable') (fun c => union (derive c) (derive' c))
     end.
   Proof.
     rewrite (frob_eq (union re re')).
-    by move: re re' => [ | | ? ? ] [ | | ? ? ] /=.
+    by move: re re' => [ | ? ? ] [ | ? ? ] /=.
   Qed.
 
   Lemma union_spec : forall s re re',
     matches (union re re') s = matches re s || matches re' s.
   Proof.
-    elim => [ | ? ? ? ] [ | | ? ? ] [ | | ? ? ] //=;
+    elim => [ | ? ? ? ] [ | ? ? ] [ | ? ? ] //=;
     by rewrite ?orbT ?orbF.
   Qed.
 
   (* union (app re1 re2) re3 *)
   CoFixpoint union_app re1 re2 re3 :=
-    match re1, re2, re3 with
-    | empty_set, _, _ => re3
-    | _, empty_set, _ => re3
-    | universal_set, regexp true _, _ => universal_set
-    | regexp true _, universal_set, _ => universal_set
-    | universal_set, universal_set, _ => universal_set
-    | _, _, universal_set => universal_set
-    | _, _, _ =>
-      regexp (is_nullable re1 && is_nullable re2 || is_nullable re3) (fun c =>
-        if is_nullable re1
-        then union_app (derive re1 c) re2 (union (derive re2 c) (derive re3 c))
-        else union_app (derive re1 c) re2 (derive re3 c))
+    match re1, re2 with
+    | empty_set, _ => re3
+    | _, empty_set => re3
+    | regexp is_nullable1 derive1, regexp is_nullable2 derive2 =>
+      regexp (is_nullable1 && is_nullable2 || is_nullable re3) (fun c =>
+        if is_nullable1
+        then union_app (derive1 c) re2 (union (derive2 c) (derive re3 c))
+        else union_app (derive1 c) re2 (derive re3 c))
     end.
 
   Lemma union_app_eq re1 re2 re3 : union_app re1 re2 re3 =
-    match re1, re2, re3 with
-    | empty_set, _, _ => re3
-    | _, empty_set, _ => re3
-    | universal_set, regexp true _, _ => universal_set
-    | regexp true _, universal_set, _ => universal_set
-    | universal_set, universal_set, _ => universal_set
-    | _, _, universal_set => universal_set
-    | _, _, _ =>
-      regexp (is_nullable re1 && is_nullable re2 || is_nullable re3) (fun c =>
-        if is_nullable re1
-        then union_app (derive re1 c) re2 (union (derive re2 c) (derive re3 c))
-        else union_app (derive re1 c) re2 (derive re3 c))
+    match re1, re2 with
+    | empty_set, _ => re3
+    | _, empty_set => re3
+    | regexp is_nullable1 derive1, regexp is_nullable2 derive2 =>
+      regexp (is_nullable1 && is_nullable2 || is_nullable re3) (fun c =>
+        if is_nullable1
+        then union_app (derive1 c) re2 (union (derive2 c) (derive re3 c))
+        else union_app (derive1 c) re2 (derive re3 c))
     end.
   Proof.
     rewrite (frob_eq (union_app re1 re2 re3)).
-    by move: re1 re2 re3 => [ | | [ ] ? ] [ | | [ ] ? ] [ | | ? ? ] /=.
+    by move: re1 re2 re3 => [ | ? ? ] [ | ? ? ] [ | ? ? ] /=.
   Qed.
 
   Lemma union_app_spec : forall s re1 re2 re3,
@@ -214,96 +168,38 @@ Module F (C : Char).
         - left. by exists nil, nil.
         - by rewrite !is_nullable_spec => -> ->.
         - by rewrite orbT. }
-      move => [ | | [ ] derive1 ] /=.
-      + split => [ -> | [ [ [ | ? ? ] [ [ | ? ? ] [ // ? [ ] ] ] ] | -> ] ]; eauto.
-      + move => [ | | [ ] derive2 ] /=.
-        * split => [ -> | [ [ [ | ? ? ] [ [ | ? ? ] [ // ? [ ] ] ] ] | -> ] ]; eauto.
-        * split; eauto. left. exists nil, nil. by rewrite !universal_set_spec.
-        * split; eauto. left. exists nil, nil. by rewrite !universal_set_spec.
-        * { move => [ | | is_nullable3 derive3 ].
-            - exact /(H universal_set (regexp false derive2) empty_set).
-            - split; eauto.
-            - exact /(H universal_set (regexp false derive2) (regexp is_nullable3 derive3)). }
-      + move => [ | | is_nullable2 derive2 ].
-        * split => [ -> | [ [ [ | ? ? ] [ [ | ? ? ] [ // ? [ ] ] ] ] | -> ] ]; eauto.
-        * split; eauto. left. exists nil, nil. by rewrite !universal_set_spec.
-        * { move => [ | | is_nullable3 derive3 ].
-            - exact /(H (regexp true derive1) (regexp is_nullable2 derive2) empty_set).
-            - split; eauto.
-            - exact /(H (regexp true derive1) (regexp is_nullable2 derive2) (regexp is_nullable3 derive3)). }
-      + move => [ | | is_nullable2 derive2 ].
-        * split => [ -> | [ [ [ | ? ? ] [ [ | ? ? ] [ // ? [ ] ] ] ] | -> ] ]; eauto.
-        * { move => [ | | is_nullable3 derive3 ].
-            - exact /(H (regexp false derive1) universal_set empty_set).
-            - split; eauto.
-            - exact /(H (regexp false derive1) universal_set (regexp is_nullable3 derive3)). }
-        * { move => [ | | is_nullable3 derive3 ].
-            - exact /(H (regexp false derive1) (regexp is_nullable2 derive2) empty_set).
-            - split; eauto.
-            - exact /(H (regexp false derive1) (regexp is_nullable2 derive2) (regexp is_nullable3 derive3)). }
-    - have H : forall re1 re2 re3,
-        matches
-          (if is_nullable re1
-           then union_app (derive re1 c) re2 (union (derive re2 c) (derive re3 c))
-           else union_app (derive re1 c) re2 (derive re3 c)) s <->
-        (exists s1 s2 : list character, c :: s = s1 ++ s2 /\ matches re1 s1 /\ matches re2 s2) \/
-        matches (derive re3 c) s.
-      { (split; case (@idP (is_nullable re1)) => [ | /negP ] His_nullable) => [ /IH [ [ s1 [ s2 [ -> [ ? ? ] ] ] ] | ] | /IH [ [ s1 [ s2 [ -> [ ] ] ] ] | ] | H | H ]; eauto.
-        - left. exists (c :: s1), s2. by rewrite derive_spec.
-        - rewrite union_spec => /orP [ | -> ]; eauto.
-          left. exists nil, (c :: s). by rewrite derive_spec.
-        - left. exists (c :: s1), s2. by rewrite derive_spec.
-        - apply /IH.
-          case H.
-          + move => [ [ [ [ | ? ? ] [ // ] ] | ? ? [ ? [ ] ] ] ];
-            inversion 1; subst => [ [ ] ]; rewrite derive_spec => ? Hre2; eauto 6.
-            right. by rewrite union_spec Hre2.
-          + rewrite union_spec => ->.
-            rewrite orbT. eauto.
-        - apply /IH.
-          case H; eauto.
-          move => [ [ [ [ | ? ? ] [ // ] ] | ? ? [ ? [ ] ] ] ];
-          inversion 1; subst => [ [ ] ]; rewrite derive_spec; eauto 6.
-          by rewrite -is_nullable_spec (negbTE His_nullable). }
-      move => [ | | [ ] derive1 ].
+      move => [ | is_nullable1 derive1 ].
+      + split => /= [ -> | [ [ [ | ? ? ] [ [ | ? ? ] [ // ? [ ] ] ] ] | -> ] ]; eauto.
+      + move => [ | is_nullable2 derive2 re3 ].
+        * split => /= [ -> | [ [ [ | ? ? ] [ [ | ? ? ] [ // ? [ ] ] ] ] | -> ] ]; eauto.
+        * { rewrite -(is_nullable_spec re3) /=.
+            split => [ /orP [ /andP [ ? ? ] | -> ] | [ [ [ | ? ? ] [ [ | ? ? ] [ // ? [ ] ] ] ] | -> ] ]; eauto.
+            - left. by exists nil, nil.
+            - by rewrite -!is_nullable_spec => /= -> ->.
+            - by rewrite orbT. }
+    - move => [ | is_nullable1 derive1 ].
       + split => /= [ -> | [ [ ? [ ? [ ? [ ] ] ] ] | -> ] ]; eauto.
         by rewrite (negbTE (empty_set_spec _)).
-      + move => [ | | [ ] derive2 ].
+      + move => [ | is_nullable2 derive2 re3 ].
         * split => /= [ -> | [ [ ? [ ? [ ? [ ] ] ] ] | -> ] ]; eauto.
           by rewrite (negbTE (empty_set_spec _)).
-        * split => ? //=.
-          left. exists nil, (c :: s). by rewrite !universal_set_spec.
-        * split => ? //=.
-          left. exists (c :: s), nil. by rewrite app_nil_r universal_set_spec.
-        * { move => [ | | is_nullable3 derive3 ].
-            - move: (H universal_set (regexp false derive2) empty_set).
-              by rewrite /= (negbTE (empty_set_spec _)).
-            - rewrite union_app_eq !universal_set_spec.
-              split; eauto.
-            - exact /(H universal_set (regexp false derive2) (regexp is_nullable3 derive3)). }
-      + move => [ | | is_nullable2 derive2 ].
-        * split => /= [ -> | [ [ ? [ ? [ ? [ ] ] ] ] | -> ] ]; eauto.
-          by rewrite (negbTE (empty_set_spec _)).
-        * split => ? //=.
-          left. exists nil, (c :: s). by rewrite universal_set_spec.
-        * { move => [ | | is_nullable3 derive3 ].
-            - move: (H (regexp true derive1) (regexp is_nullable2 derive2) empty_set).
-              by rewrite /= (negbTE (empty_set_spec _)).
-            - split; eauto.
-            - exact /(H (regexp true derive1) (regexp is_nullable2 derive2) (regexp is_nullable3 derive3)). }
-      + move => [ | | is_nullable2 derive2 ].
-        * split => /= [ -> | [ [ ? [ ? [ ? [ ] ] ] ] | -> ] ]; eauto.
-          by rewrite (negbTE (empty_set_spec _)).
-        * { move => [ | | is_nullable3 derive3 ].
-            - move: (H (regexp false derive1) universal_set empty_set).
-              by rewrite /= (negbTE (empty_set_spec _)).
-            - split; eauto.
-            - exact /(H (regexp false derive1) universal_set (regexp is_nullable3 derive3)). }
-        * { move => [ | | is_nullable3 derive3 ].
-            - move: (H (regexp false derive1) (regexp is_nullable2 derive2) empty_set).
-              by rewrite /= (negbTE (empty_set_spec _)).
-            - split; eauto.
-            - exact /(H (regexp false derive1) (regexp is_nullable2 derive2) (regexp is_nullable3 derive3)). }
+        * rewrite (derive_spec re3) /=.
+          { (split; case is_nullable1) => [ /IH [ [ s1 [ s2 [ -> [ ? ? ] ] ] ] | ] | /IH [ [ s1 [ s2 [ -> [ ] ] ] ] | ] | H | H ]; eauto.
+            - left. exists (c :: s1), s2. by rewrite derive_spec.
+            - rewrite union_spec => /orP [ | -> ]; eauto.
+              left. exists nil, (c :: s). by rewrite derive_spec.
+            - left. exists (c :: s1), s2. by rewrite derive_spec.
+            - apply /IH.
+              case H.
+              + move => [ [ [ [ | ? ? ] [ // ] ] | ? ? [ ? [ ] ] ] ];
+                inversion 1; subst => [ [ ] ]; rewrite derive_spec => ? Hre2; eauto 6.
+                right. by rewrite union_spec Hre2.
+              + rewrite union_spec => ->.
+                rewrite orbT. eauto.
+            - apply /IH.
+              case H; eauto.
+              move => [ [ [ [ | ? ? ] [ // ] ] | ? ? [ ? [ ] ] ] ];
+              inversion 1; subst => [ [ ] ]; rewrite derive_spec; eauto 6. }
   Qed.
 
   Definition app re1 re2 := union_app re1 re2 empty_set.
@@ -321,7 +217,6 @@ Module F (C : Char).
   CoFixpoint app_star re1 re2 :=
     match re1 with
     | empty_set => empty_set
-    | universal_set => universal_set
     | regexp is_nullable1 derive1 =>
       regexp is_nullable1 (fun c =>
         if is_nullable1
@@ -332,7 +227,6 @@ Module F (C : Char).
   Lemma app_star_eq re1 re2 : app_star re1 re2 =
     match re1 with
     | empty_set => empty_set
-    | universal_set => universal_set
     | regexp is_nullable1 derive1 =>
       regexp is_nullable1 (fun c =>
         if is_nullable1
@@ -341,7 +235,7 @@ Module F (C : Char).
     end.
   Proof.
     rewrite (frob_eq (app_star re1 re2)).
-    by move: re1 re2 => [ | | ? ? ] [ | | ? ? ] /=.
+    by move: re1 re2 => [ | ? ? ] [ | ? ? ] /=.
   Qed.
 
   Inductive matches_star re : list character -> Prop :=
@@ -367,17 +261,13 @@ Module F (C : Char).
     matches (app_star re1 re2) s <->
     exists s1 s2, s = s1 ++ s2 /\ matches re1 s1 /\ matches_star re2 s2.
   Proof.
-    elim => [ | c s IH ] [ | | is_nullable1 derive1 ] re2 /=.
+    elim => [ | c s IH ] [ | is_nullable1 derive1 ] re2 /=.
     - split => [ // | [ ? [ ? [ ? [ ] ] ] ] ].
       by rewrite (negbTE (empty_set_spec _)).
-    - split => // ?.
-      exists nil, nil. repeat split. exact /matches_star_nil.
     - split => [ -> | [ [ | ? ? ] [ [ | ? ? ] [ ? [ // ] ] ] ] ].
       exists nil, nil. repeat split. exact /matches_star_nil.
     - split => [ // | [ ? [ ? [ ? [ ] ] ] ] ].
       by rewrite (negbTE (empty_set_spec _)).
-    - split => // ?.
-      exists (c :: s), nil. rewrite app_nil_r. repeat split. exact /matches_star_nil.
     - case is_nullable1;
       split => [ /IH [ s1 [ s2 [ -> [ ] ] ] ] | H ].
       + rewrite union_spec => /orP [ ] ? ?.
