@@ -1,3 +1,12 @@
+module type DirectedGraph = sig
+  module Vertex : sig
+    type t
+    type set
+    val universe : set
+    val iter_adjacency : t -> (t -> unit) -> unit
+  end
+end
+
 module F
   (Array : sig
     type t
@@ -9,11 +18,15 @@ module F
     val set : t -> key -> elt -> unit
   end)
 = struct
+  type distance = int
   type vertex = Array.key
   type vertices = Array.size
 
-  let shortest_path n es s =
-    let d = Array.make n in
+  let shortest_path
+    (module G : DirectedGraph
+      with type Vertex.t = vertex
+       and type Vertex.set = vertices) s =
+    let d = Array.make G.Vertex.universe in
     (* 始点への経路長を0にする *)
     Array.set d s 0;
     let w = ref 1 in
@@ -30,7 +43,7 @@ module F
           | _ ->
               q := [];
               List.iter (fun u ->
-                es u @@ fun v ->
+                G.Vertex.iter_adjacency u @@ fun v ->
                   if !w < Array.get d v then
                     (q := v :: !q; Array.set d v !w)) us;
               incr w;
