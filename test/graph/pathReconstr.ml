@@ -9,7 +9,16 @@ end
 
 module IntMap = Map.Make (Int)
 
-module G = Compelib.Dijkstra.F (Int)
+module G = Compelib.Dijkstra.F
+  (struct
+    type t = int array
+    type key = int
+    type elt = int
+    type size = int
+    let make = Fun.flip Array.make max_int
+    let get = Array.get
+    let set = Array.set
+  end)
   (struct
     type t = int list IntMap.t ref
     type elt = int
@@ -24,15 +33,6 @@ module G = Compelib.Dijkstra.F (Int)
     let add q w v  =
       q := IntMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
-  (struct
-    type t = int array
-    type key = int
-    type elt = int
-    type size = int
-    let make = Fun.flip Array.make max_int
-    let get = Array.get
-    let set = Array.set
-  end)
 
 let e =
   [|[ (1, 7); (2, 9); (5, 14) ];
@@ -43,8 +43,16 @@ let e =
     [ (0, 14); (2, 2); (4, 9) ]|]
 
 let d =
-  Fun.flip (G.shortest_path 6) 0 @@
-  fun u f -> Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+  G.shortest_path
+    (module struct
+      module Weight = Int
+      module Vertex = struct
+        type t = int
+        type set = int
+        let universe = 7
+        let iter_adjacency u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+      end
+    end) 0
 
 (* 経路復元を行う *)
 
