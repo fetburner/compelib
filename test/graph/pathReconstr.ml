@@ -45,7 +45,7 @@ let e =
 let d =
   G.shortest_path
     (module struct
-      module Weight = Int
+      module Distance = Int
       module Vertex = struct
         type t = int
         type set = int

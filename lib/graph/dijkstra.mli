@@ -1,5 +1,5 @@
 module type WeightedDirectedGraph = sig
-  module Weight : sig
+  module Distance : sig
     type t
     val zero : t
     val compare : t -> t -> int
@@ -10,7 +10,7 @@ module type WeightedDirectedGraph = sig
     (* グラフに含まれる頂点の集合 *)
     val universe : set
     (* 最短経路を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ *)
-    val iter_adjacency : t -> (t -> (Weight.t -> Weight.t) (* 辺を通った際のコストを加算する関数 *) -> unit) -> unit
+    val iter_adjacency : t -> (t -> (Distance.t -> Distance.t) (* 辺を通った際の距離を加算する関数 *) -> unit) -> unit
   end
 end
 
@@ -48,16 +48,20 @@ module F
     val take_min_binding : t -> (key * elt) option
   end)
 : sig
+  type vertex = Array.key
+  type distance = Array.elt
+  type vertices = Array.size
+
   (* ダイクストラ法で最短経路を求める関数 *)
   val shortest_path :
     (module WeightedDirectedGraph
-      with type Weight.t = Array.elt
-       and type Vertex.t = Array.key
-       and type Vertex.set = Array.size) ->
+      with type Vertex.t = vertex
+       and type Vertex.set = vertices
+       and type Distance.t = distance) ->
     (* 始点 *)
-    Array.key ->
+    vertex ->
     (* 終点を受け取って，始点からの最短距離を返す関数
        始点から辿り着けない場合，無限大を返す
        この関数を覚えておけば，呼び出しごとの途中までの計算結果がシェアされる *)
-    (Array.key -> Array.elt)
+    (vertex -> distance)
 end

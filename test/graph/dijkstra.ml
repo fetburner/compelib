@@ -43,7 +43,7 @@ let e =
 let%test _ =
   List.init 7 (G.shortest_path
     (module struct
-      module Weight = Int
+      module Distance = Int
       module Vertex = struct
         type t = int
         type set = int
@@ -82,7 +82,7 @@ module G' = Compelib.Dijkstra.F
 let%test _ =
   List.init 10 (G'.shortest_path
     (module struct
-      module Weight = Int
+      module Distance = Int
       module Vertex = struct
         type t = int
         type set = unit
@@ -96,7 +96,7 @@ let%test _ =
 let%test _ =
   List.init 10 (G'.shortest_path
     (module struct
-      module Weight = Int
+      module Distance = Int
       module Vertex = struct
         type t = int
         type set = unit
