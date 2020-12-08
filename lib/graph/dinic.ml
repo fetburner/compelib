@@ -81,7 +81,7 @@ module F
               type t = vertex
               type set = vertices
               let universe = n
-              let iter_adjacency v f =
+              let iter_adjacencies v f =
                 Fun.flip List.iter (Array.get adj v) @@ fun e ->
                   if 0 < Flow.compare e.capacity Flow.zero then f e.dst
             end

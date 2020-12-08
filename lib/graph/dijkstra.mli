@@ -10,7 +10,7 @@ module type WeightedDirectedGraph = sig
     (* グラフに含まれる頂点の集合 *)
     val universe : set
     (* 最短経路を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ *)
-    val iter_adjacency : t -> (t -> (Distance.t -> Distance.t) (* 辺を通った際の距離を加算する関数 *) -> unit) -> unit
+    val iter_adjacencies : t -> (t -> (Distance.t -> Distance.t) (* 辺を通った際の距離を加算する関数 *) -> unit) -> unit
   end
 end
 

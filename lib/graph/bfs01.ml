@@ -3,7 +3,7 @@ module type Weighted01DirectedGraph = sig
     type t
     type set
     val universe : set
-    val iter_adjacency : t -> f0:(t -> unit) -> f1:(t -> unit) -> unit
+    val iter_adjacencies : t -> f0:(t -> unit) -> f1:(t -> unit) -> unit
   end
 end
 
@@ -46,7 +46,7 @@ module F
               incr w;
               bfs t
     and dfs u =
-      G.Vertex.iter_adjacency u
+      G.Vertex.iter_adjacencies u
         ~f0:(fun v ->
           if !w <= Array.get d v then
             (Array.set d v (!w - 1); dfs v))

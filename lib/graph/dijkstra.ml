@@ -8,7 +8,7 @@ module type WeightedDirectedGraph = sig
     type t
     type set
     val universe : set
-    val iter_adjacency : t -> (t -> (Distance.t -> Distance.t) -> unit) -> unit
+    val iter_adjacencies : t -> (t -> (Distance.t -> Distance.t) -> unit) -> unit
   end
 end
 
@@ -60,7 +60,7 @@ module F
           | _ ->
               (* 未だ頂点uを訪れていない *)
               if 0 <= G.Distance.compare (Array.get d u) w then
-                G.Vertex.iter_adjacency u (fun v f ->
+                G.Vertex.iter_adjacencies u (fun v f ->
                   (* uからvに伸びる辺を通った際の経路長 *)
                   let c = f w in
                   if 0 < G.Distance.compare (Array.get d v) c then

@@ -7,7 +7,7 @@ module type Weighted01DirectedGraph = sig
     val universe : set
     (* 最短経路を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ
        重みが0の辺に対してはf0を，1の辺に対してはf1を用いる *)
-    val iter_adjacency : t -> f0:(t -> unit) -> f1:(t -> unit) -> unit
+    val iter_adjacencies : t -> f0:(t -> unit) -> f1:(t -> unit) -> unit
   end
 end
 

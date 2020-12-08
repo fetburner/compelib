@@ -3,7 +3,7 @@ module type DirectedGraph = sig
     type t
     type set
     val universe : set
-    val iter_adjacency : t -> (t -> unit) -> unit
+    val iter_adjacencies : t -> (t -> unit) -> unit
   end
 end
 
@@ -43,7 +43,7 @@ module F
           | _ ->
               q := [];
               List.iter (fun u ->
-                G.Vertex.iter_adjacency u @@ fun v ->
+                G.Vertex.iter_adjacencies u @@ fun v ->
                   if !w < Array.get d v then
                     (q := v :: !q; Array.set d v !w)) us;
               incr w;

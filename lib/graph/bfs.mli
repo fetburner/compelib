@@ -5,7 +5,7 @@ module type DirectedGraph = sig
     (* グラフに含まれる頂点の集合 *)
     val universe : set
     (* 最短経路を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ *)
-    val iter_adjacency : t -> (t -> unit) -> unit
+    val iter_adjacencies : t -> (t -> unit) -> unit
   end
 end
 

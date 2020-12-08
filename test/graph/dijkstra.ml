@@ -48,7 +48,7 @@ let%test _ =
         type t = int
         type set = int
         let universe = 7
-        let iter_adjacency u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+        let iter_adjacencies u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
       end
     end) 0)
   = [ 0; 7; 9; 20; 20; 11; max_int ]
@@ -87,7 +87,7 @@ let%test _ =
         type t = int
         type set = unit
         let universe = ()
-        let iter_adjacency u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+        let iter_adjacencies u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
       end
     end) 0)
   = [ 0; 7; 9; 20; 20; 11; max_int; max_int; max_int; max_int ]
@@ -101,7 +101,7 @@ let%test _ =
         type t = int
         type set = unit
         let universe = ()
-        let iter_adjacency u f = f (u + 1) succ
+        let iter_adjacencies u f = f (u + 1) succ
       end
     end) 0)
   = [0; 1; 2; 3; 4; 5; 6; 7; 8; 9]

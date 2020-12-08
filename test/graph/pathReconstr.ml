@@ -50,7 +50,7 @@ let d =
         type t = int
         type set = int
         let universe = 7
-        let iter_adjacency u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+        let iter_adjacencies u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
       end
     end) 0
 

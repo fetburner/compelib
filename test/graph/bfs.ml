@@ -21,7 +21,7 @@ let d = G.shortest_path
       type t = int array
       type set = int array
       let universe = [| 6; 5 |]
-      let iter_adjacency [| i; j |] f =
+      let iter_adjacencies [| i; j |] f =
         List.iter (fun ([| i; j |] as v) ->
           match maze.(j).[i] = '.' with
           | false | exception (Invalid_argument _) -> ()
