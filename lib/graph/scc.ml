@@ -15,51 +15,63 @@ module type List = sig
   val cons : elt -> t -> t
 end
 
-module F
-  (Array : sig
-    type t
-    type elt = bool
-    type key
-    type size
-    val make : size -> t
-    val get : t -> key -> elt
-    val set : t -> key -> elt -> unit
-  end)
-= struct
-  type vertex = Array.key
-  type vertices = Array.size
+module type Array = sig
+  type t
+  type elt
+  type key
+  type size
+  val make : size -> t
+  val get : t -> key -> elt
+  val set : t -> key -> elt -> unit
+end
 
-  let visit (type l)
-    (module L : List with type t = l and type elt = vertex)
-    (module G : UnweightedDirectedGraph with type Vertex.t = vertex) vs =
+module F
+  (A : Array with type elt = bool)
+  (L : List with type elt = A.key)
+= struct
+  type vertex = A.key
+  type vertices = A.size
+
+  let visit
+    (module G : UnweightedDirectedGraph
+      with type Vertex.t = vertex
+      and type Vertex.set = vertices) vs =
     let rec visit v l =
-      if Array.get vs v
+      if A.get vs v
       then l
-      else (Array.set vs v true; L.cons v (G.Vertex.fold_adjacencies v visit l)) in
+      else (A.set vs v true; L.cons v (G.Vertex.fold_adjacencies v visit l)) in
     visit
 
-  let sort (type l)
-    (module L : List with type t = l and type elt = vertex)
+  let sort
     (module G : UnweightedDirectedGraph
       with type Vertex.t = vertex
        and type Vertex.set = vertices) =
-    let vs = Array.make G.Vertex.universe in
-    G.Vertex.fold_universe (visit (module L) (module G) vs) L.nil
+    let vs = A.make G.Vertex.universe in
+    G.Vertex.fold_universe (visit (module G) vs) L.nil
+end
 
-  let scc (type l) (type ll)
-    (module L : List with type t = l and type elt = vertex)
-    (module LL : List with type t = ll and type elt = l)
+module G
+  (A : Array with type elt = bool)
+  (L : List with type elt = A.key)
+  (LL : List with type elt = L.t)
+= struct
+  type vertex = A.key
+  type vertices = A.size
+
+  let scc
     (module G : UnweightedDirectedGraph
       with type Vertex.t = vertex
        and type Vertex.set = vertices) =
-    let vs = Array.make G.Vertex.universe in
-    sort
-      (module struct
+    let vs = A.make G.Vertex.universe in
+    let module M = F (A) (L) in
+    let module N = F (A)
+      (struct
         include LL
         type elt = vertex
         let cons v l =
-          if Array.get vs v
+          if A.get vs v
           then l
-          else LL.cons (visit (module L) (module G) vs v L.nil) l
-      end) (module G)
+          else LL.cons (M.visit (module G) vs v L.nil) l
+      end) in
+    N.sort (module G)
 end

@@ -20,42 +20,54 @@ module type List = sig
   val cons : elt -> t -> t
 end
 
+module type Array = sig
+  type t
+  type elt
+  type key
+  type size
+  val make : size -> t
+  val get : t -> key -> elt
+  val set : t -> key -> elt -> unit
+end
+
 module F
-  (* 頂点を添字，真偽値を要素とした配列の実装 *)
-  (Array : sig
-    type t
-    type elt = bool
-    type key
-    type size
-    (* falseで初期化された配列を作成する *)
-    val make : size -> t
-    val get : t -> key -> elt
-    val set : t -> key -> elt -> unit
-  end)
+  (* 頂点を添字，真偽値を要素とした配列の実装
+     A.make は false で初期化された配列を返さなくてはならない *)
+  (A : Array with type elt = bool)
+  (* 頂点のリスト *)
+  (L : List with type elt = A.key)
 : sig
-  type vertex = Array.key
-  type vertices = Array.size
-  
+  type vertex = A.key
+  type vertices = A.size
+
   (* トポロジカルソート *)
   val sort :
-    (* 頂点のリスト *)
-    (module List with type elt = vertex and type t = 'l) ->
     (* 有向グラフ *)
     (module UnweightedDirectedGraph
       with type Vertex.t = vertex
        and type Vertex.set = vertices) ->
     (* 頂点をトポロジカルソートしたリスト *)
-    'l
+    L.t
+end
+
+module G
+  (* 頂点を添字，真偽値を要素とした配列の実装
+     A.make は false で初期化された配列を返さなくてはならない *)
+  (A : Array with type elt = bool)
+  (* 頂点のリスト *)
+  (L : List with type elt = A.key)
+  (* 頂点のリストのリスト *)
+  (LL : List with type elt = L.t)
+: sig
+  type vertex = A.key
+  type vertices = A.size
 
   (* 強連結成分分解 *)
   val scc :
-    (* 頂点のリスト *)
-    (module List with type elt = vertex and type t = 'l) ->
-    (* 頂点のリストのリスト *)
-    (module List with type elt = 'l and type t = 'll) ->
     (* 有向グラフ *)
     (module UnweightedDirectedGraph
       with type Vertex.t = vertex
        and type Vertex.set = vertices) ->
-    'll
+    (* 強連結成分のリスト *)
+    LL.t
 end
