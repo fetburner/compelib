@@ -32,8 +32,8 @@ module type UnrootedWeightedTree = sig
     type t
     val weight : t -> Weight.t
     val endpoint : t -> Vertex.t
+    val universe_fold : (t -> 'a -> 'a) -> 'a -> 'a
   end
-  val fold_edges : (Edge.t -> 'a -> 'a) -> 'a -> 'a
 end
 
 module F
@@ -70,27 +70,29 @@ module F
     (module struct
       module Weight = G.Weight
       module Vertex = G.Vertex
-      module Edge = G.Edge
-      let fold_edges f acc =
-        let q = Heap.make G.Vertex.universe in
-        let d = Array.make G.Vertex.universe in
-        let rec prim acc u =
-          Array.set d u G.Weight.zero;
-          G.Vertex.iter_connected_edges u (fun e ->
-            let w = G.Edge.weight e in
-            let v = G.Edge.endpoint e in
-            if 0 < Weight.compare (Array.get d v) w then
-              (Array.set d v w; Heap.add q w e));
-          prim' acc
-        and prim' acc =
-          match Heap.take_min_binding q with
-          | None -> acc
-          | Some (w, e) ->
-              let u = G.Edge.endpoint e in
-              if 0 < Weight.compare w (Array.get d u)
-              then prim' acc
-              else prim (f e acc) u in
-        prim acc s
+      module Edge = struct
+        include G.Edge
+        let universe_fold f acc =
+          let q = Heap.make G.Vertex.universe in
+          let d = Array.make G.Vertex.universe in
+          let rec prim acc u =
+            Array.set d u G.Weight.zero;
+            G.Vertex.iter_connected_edges u (fun e ->
+              let w = G.Edge.weight e in
+              let v = G.Edge.endpoint e in
+              if 0 < Weight.compare (Array.get d v) w then
+                (Array.set d v w; Heap.add q w e));
+            prim' acc
+          and prim' acc =
+            match Heap.take_min_binding q with
+            | None -> acc
+            | Some (w, e) ->
+                let u = G.Edge.endpoint e in
+                if 0 < Weight.compare w (Array.get d u)
+                then prim' acc
+                else prim (f e acc) u in
+          prim acc s
+      end
     end : UnrootedWeightedTree
       with type Edge.t = edge
        and type Weight.t = weight
