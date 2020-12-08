@@ -47,7 +47,7 @@ module type UnrootedWeightedTree = sig
     (* 辺の端点の一つ *)
     val endpoint : t -> Vertex.t
     (* グラフに含まれる全ての辺を畳み込む *)
-    val universe_fold : (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
   end
 end
 

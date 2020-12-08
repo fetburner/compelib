@@ -6,7 +6,7 @@ module type UnweightedDirectedGraph = sig
     (* グラフに含まれる頂点の集合 *)
     val universe : set
     (* 頂点に含まれる集合の畳み込み *)
-    val universe_fold : (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
     (* 隣接する頂点の畳み込み *)
     val fold_adjacencies : t -> (t -> 'a -> 'a) -> 'a -> 'a
   end

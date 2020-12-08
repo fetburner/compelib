@@ -32,7 +32,7 @@ module type UnrootedWeightedTree = sig
     type t
     val weight : t -> Weight.t
     val endpoint : t -> Vertex.t
-    val universe_fold : (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
   end
 end
 
@@ -72,7 +72,7 @@ module F
       module Vertex = G.Vertex
       module Edge = struct
         include G.Edge
-        let universe_fold f acc =
+        let fold_universe f acc =
           let q = Heap.make G.Vertex.universe in
           let d = Array.make G.Vertex.universe in
           let rec prim acc u =

@@ -3,7 +3,7 @@ module type UnweightedDirectedGraph = sig
     type t
     type set
     val universe : set
-    val universe_fold : (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
     val fold_adjacencies : t -> (t -> 'a -> 'a) -> 'a -> 'a
   end
 end
@@ -44,7 +44,7 @@ module F
       with type Vertex.t = vertex
        and type Vertex.set = vertices) =
     let vs = Array.make G.Vertex.universe in
-    G.Vertex.universe_fold (visit (module L) (module G) vs) L.nil
+    G.Vertex.fold_universe (visit (module L) (module G) vs) L.nil
 
   let scc (type l) (type ll)
     (module L : List with type t = l and type elt = vertex)

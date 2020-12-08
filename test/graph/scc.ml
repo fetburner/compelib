@@ -32,7 +32,7 @@ module G = struct
       if n = 0
       then acc
       else foldn (n - 1) f (f n acc)
-    let universe_fold f acc = foldn universe f acc
+    let fold_universe f acc = foldn universe f acc
     let fold_adjacencies v f acc =
       List.fold_right f
         begin match v with

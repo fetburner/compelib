@@ -59,7 +59,7 @@ let%test _ =
         let endpoint = fst
       end
     end) 0) in
-  T.Edge.universe_fold (fun (_, w) -> ( + ) w) 0 = 39
+  T.Edge.fold_universe (fun (_, w) -> ( + ) w) 0 = 39
 
 (* 使った辺を列挙したい場合 *)
 
@@ -104,5 +104,5 @@ let%test _ =
         let endpoint (_, v, _) = v
       end
     end) 0) in
-  List.sort compare (T.Edge.universe_fold (fun (u, v, w) -> List.cons (min u v, max u v, w)) [])
+  List.sort compare (T.Edge.fold_universe (fun (u, v, w) -> List.cons (min u v, max u v, w)) [])
   = [(0, 1, 7); (0, 3, 5); (1, 4, 7); (2, 4, 5); (3, 5, 6); (4, 6, 9)]
