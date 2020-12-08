@@ -1,23 +1,73 @@
-module F
+(* 重み付き無向グラフ *)
+module type WeightedUndirectedGraph = sig
   (* 辺の重み *)
-  (Weight : sig
+  module Weight : sig
     type t
     val zero : t
     val compare : t -> t -> int
-  end)
-  (Edge : sig
+  end
+  (* 頂点 *)
+  module rec Vertex : sig
     type t
-    type vertex
-    type weight = Weight.t
-    val weight : t -> weight
-    val vertex : t -> vertex
+    type set
+    (* 頂点の全体集合 *)
+    val universe : set
+    (* ある頂点を端点の一つとした辺についてのイテレータ *)
+    val iter_connected_edges : t -> (Edge.t -> unit) -> unit
+  end
+  and Edge : sig
+    type t
+    (* 辺の重み *)
+    val weight : t -> Weight.t
+    (* 辺の端点の一つ *)
+    val endpoint : t -> Vertex.t
+  end
+end
+
+(* 重み付きの根なし木 *)
+module type UnrootedWeightedTree = sig
+  (* 辺の重み *)
+  module Weight : sig
+    type t
+    val zero : t
+    val compare : t -> t -> int
+  end
+  (* 頂点 *)
+  module Vertex : sig
+    type t
+    type set
+    (* 頂点の全体集合 *)
+    val universe : set
+  end
+  (* 辺 *)
+  module Edge : sig
+    type t
+    (* 辺の重み *)
+    val weight : t -> Weight.t
+    (* 辺の端点の一つ *)
+    val endpoint : t -> Vertex.t
+  end
+  val fold_edges : (Edge.t -> 'a -> 'a) -> 'a -> 'a
+end
+
+module F
+  (* 頂点を添字，辺の重みを要素とした配列の実装 *)
+  (Array : sig
+    type t
+    type key
+    type elt
+    type size
+    (* 全ての頂点について無限大で初期化された配列を作る *)
+    val make : size -> t
+    val get : t -> key -> elt
+    val set : t -> key -> elt -> unit
   end)
   (* 辺の重みを優先度としたヒープの実装 *)
   (Heap : sig
     type t
-    type size
-    type elt = Edge.t
-    type key = Edge.weight (* 辺の重みに相当 *)
+    type size = Array.size
+    type elt
+    type key = Array.elt (* 辺の重みに相当 *)
     (* 空なヒープを作成する *)
     val make : size -> t
     (* ヒープが空ならNoneを，
@@ -31,31 +81,29 @@ module F
        空間計算量O(V)に改善する *)
     val add : t -> key -> elt -> unit
   end)
-  (* 頂点を添字，辺の重みを要素とした配列の実装 *)
-  (Array : sig
-    type t
-    type key = Edge.vertex
-    type elt = Edge.weight
-    type size = Heap.size
-    (* 全ての頂点について無限大で初期化された配列を作る *)
-    val make : size -> t
-    val get : t -> key -> elt
-    val set : t -> key -> elt -> unit
-  end)
 : sig
-  type edge = Edge.t
-  type vertex = Edge.vertex
-  type weight = Weight.t
+  type edge = Heap.elt
+  type vertex = Array.key
+  type weight = Array.elt
   type vertices = Array.size
 
   (* プリム法で最小全域木を求める *)
   val minimum_spanning_tree :
-    (* グラフに含まれる頂点の集合 *)
-    vertices ->
-    (* 最小全域木を求めたいグラフの，ある頂点から伸びる辺に対してのイテレータ *)
-    (vertex -> (edge -> unit) -> unit) ->
+    (* 最小全域木を求めるグラフ
+       ここで，Vertex.iter_connected_edges v f で，
+       f に渡される辺 e に対して Edge.endpoint を呼び出すと，
+       v でない方の端点が返される必要がある *)
+    (module WeightedUndirectedGraph
+      with type Edge.t = edge
+       and type Weight.t = weight
+       and type Vertex.t = vertex
+       and type Vertex.set = vertices) ->
     (* 頂点の一つ（これは必ず最小全域木に含まれる） *)
     vertex ->
-    (* 最小全域木に含まれる辺のリストについての畳み込み *)
-    (edge -> 'a -> 'a) -> 'a -> 'a
+    (* 最小全域木 *)
+    (module UnrootedWeightedTree
+      with type Edge.t = edge
+       and type Weight.t = weight
+       and type Vertex.t = vertex
+       and type Vertex.set = vertices)
 end

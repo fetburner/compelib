@@ -11,16 +11,13 @@ module IntMap = Map.Make (Int)
 
 module G = Compelib.Prim.F
   (struct
-    type t = int
-    let zero = 0
-    let compare = compare
-  end)
-  (struct
-    type t = int * int
-    type vertex = int
-    type weight = int
-    let vertex = fst
-    let weight = snd
+    type t = int array
+    type key = int
+    type elt = int
+    type size = int
+    let make = Fun.flip Array.make max_int
+    let get = Array.get
+    let set = Array.set
   end)
   (struct
     type t = (int * int) list IntMap.t ref
@@ -36,15 +33,6 @@ module G = Compelib.Prim.F
     let add q w v  =
       q := IntMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
-  (struct
-    type t = int array
-    type key = int
-    type elt = int
-    type size = int
-    let make = Fun.flip Array.make max_int
-    let get = Array.get
-    let set = Array.set
-  end)
 
 let es =
   [|[(1, 7); (3, 5)];
@@ -56,23 +44,34 @@ let es =
     [(4, 9); (5, 11)]|]
 
 let%test _ =
-  G.minimum_spanning_tree 7
-    (fun u f -> List.iter f es.(u)) 0 (fun (_, w) -> ( + ) w) 0 = 39
+  let module T = (val G.minimum_spanning_tree
+    (module struct
+      module Weight = Int
+      module Vertex = struct
+        type t = int
+        type set = int
+        let universe = 7
+        let iter_connected_edges u f = List.iter f es.(u)
+      end
+      module Edge = struct
+        type t = int * int
+        let weight = snd
+        let endpoint = fst
+      end
+    end) 0) in
+  T.fold_edges (fun (_, w) -> ( + ) w) 0 = 39
 
 (* 使った辺を列挙したい場合 *)
 
 module G' = Compelib.Prim.F
   (struct
-    type t = int
-    let zero = 0
-    let compare = compare
-  end)
-  (struct
-    type t = int * int * int
-    type vertex = int
-    type weight = int
-    let vertex (_, v, _) = v
-    let weight (_, _, w) = w
+    type t = int array
+    type key = int
+    type elt = int
+    type size = int
+    let make = Fun.flip Array.make max_int
+    let get = Array.get
+    let set = Array.set
   end)
   (struct
     type t = (int * int * int) list IntMap.t ref
@@ -88,20 +87,22 @@ module G' = Compelib.Prim.F
     let add q w v  =
       q := IntMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
-  (struct
-    type t = int array
-    type key = int
-    type elt = int
-    type size = int
-    let make = Fun.flip Array.make max_int
-    let get = Array.get
-    let set = Array.set
-  end)
-
-let t =
-  G'.minimum_spanning_tree 7
-    (fun u f -> List.iter (fun (v, w) -> f (u, v, w)) es.(u)) 0 List.cons []
 
 let%test _ =
-  List.sort_uniq compare t =
-  List.sort_uniq compare [(4, 6, 9); (4, 2, 5); (1, 4, 7); (0, 1, 7); (3, 5, 6); (0, 3, 5)]
+  let module T = (val G'.minimum_spanning_tree
+    (module struct
+      module Weight = Int
+      module Vertex = struct
+        type t = int
+        type set = int
+        let universe = 7
+        let iter_connected_edges u f = List.iter (fun (v, w) -> f (u, v, w)) es.(u)
+      end
+      module Edge = struct
+        type t = int * int * int
+        let weight (_, _, w) = w
+        let endpoint (_, v, _) = v
+      end
+    end) 0) in
+  List.sort compare (T.fold_edges (fun (u, v, w) -> List.cons (min u v, max u v, w)) [])
+  = [(0, 1, 7); (0, 3, 5); (1, 4, 7); (2, 4, 5); (3, 5, 6); (4, 6, 9)]

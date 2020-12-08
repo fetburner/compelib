@@ -1,58 +1,99 @@
-module F
-  (Weight : sig
+module type WeightedUndirectedGraph = sig
+  module Weight : sig
     type t
     val zero : t
     val compare : t -> t -> int
-  end)
-  (Edge : sig
+  end
+  module rec Vertex : sig
     type t
-    type vertex
-    type weight = Weight.t
-    val weight : t -> weight
-    val vertex : t -> vertex
-  end)
-  (Heap : sig
+    type set
+    val universe : set
+    val iter_connected_edges : t -> (Edge.t -> unit) -> unit
+  end
+  and Edge : sig
     type t
-    type size
-    type elt = Edge.t
-    type key = Edge.weight
-    val make : size -> t
-    val add : t -> key -> elt -> unit
-    val take_min_binding : t -> (key * elt) option
-  end)
+    val weight : t -> Weight.t
+    val endpoint : t -> Vertex.t
+  end
+end
+
+module type UnrootedWeightedTree = sig
+  module Weight : sig
+    type t
+    val zero : t
+    val compare : t -> t -> int
+  end
+  module Vertex : sig
+    type t
+    type set
+    val universe : set
+  end
+  module Edge : sig
+    type t
+    val weight : t -> Weight.t
+    val endpoint : t -> Vertex.t
+  end
+  val fold_edges : (Edge.t -> 'a -> 'a) -> 'a -> 'a
+end
+
+module F
   (Array : sig
     type t
-    type key = Edge.vertex
-    type elt = Edge.weight
-    type size = Heap.size
+    type key
+    type elt
+    type size
     val make : size -> t
     val get : t -> key -> elt
     val set : t -> key -> elt -> unit
   end)
+  (Heap : sig
+    type t
+    type size = Array.size
+    type elt
+    type key = Array.elt
+    val make : size -> t
+    val add : t -> key -> elt -> unit
+    val take_min_binding : t -> (key * elt) option
+  end)
 = struct
-  type edge = Edge.t
-  type vertex = Edge.vertex
-  type weight = Edge.weight
+  type edge = Heap.elt
+  type vertex = Array.key
+  type weight = Array.elt
   type vertices = Array.size
 
-  let minimum_spanning_tree n es s f acc =
-    let q = Heap.make n in
-    let d = Array.make n in
-    let rec prim acc u =
-      Array.set d u Weight.zero;
-      es u (fun e ->
-        let v = Edge.vertex e in
-        let w = Edge.weight e in
-        if 0 < Weight.compare (Array.get d v) w then
-          (Array.set d v w; Heap.add q w e));
-      prim' acc
-    and prim' acc =
-      match Heap.take_min_binding q with
-      | None -> acc
-      | Some (w, e) ->
-          let u = Edge.vertex e in
-          if 0 < Weight.compare w (Array.get d u)
-          then prim' acc
-          else prim (f e acc) u in
-    prim acc s
+  let minimum_spanning_tree
+    (module G : WeightedUndirectedGraph
+      with type Edge.t = edge
+       and type Weight.t = weight
+       and type Vertex.t = vertex
+       and type Vertex.set = vertices) s =
+    (module struct
+      module Weight = G.Weight
+      module Vertex = G.Vertex
+      module Edge = G.Edge
+      let fold_edges f acc =
+        let q = Heap.make G.Vertex.universe in
+        let d = Array.make G.Vertex.universe in
+        let rec prim acc u =
+          Array.set d u G.Weight.zero;
+          G.Vertex.iter_connected_edges u (fun e ->
+            let w = G.Edge.weight e in
+            let v = G.Edge.endpoint e in
+            if 0 < Weight.compare (Array.get d v) w then
+              (Array.set d v w; Heap.add q w e));
+          prim' acc
+        and prim' acc =
+          match Heap.take_min_binding q with
+          | None -> acc
+          | Some (w, e) ->
+              let u = G.Edge.endpoint e in
+              if 0 < Weight.compare w (Array.get d u)
+              then prim' acc
+              else prim (f e acc) u in
+        prim acc s
+    end : UnrootedWeightedTree
+      with type Edge.t = edge
+       and type Weight.t = weight
+       and type Vertex.t = vertex
+       and type Vertex.set = vertices)
 end
