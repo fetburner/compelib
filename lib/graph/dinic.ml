@@ -74,9 +74,18 @@ module F
         find () in
 
     let rec outer flow =
-      let level = Fun.flip (G.shortest_path n) s @@ fun v f ->
-        Fun.flip List.iter (Array.get adj v) @@ fun e ->
-          if 0 < Flow.compare e.capacity Flow.zero then f e.dst in
+      let level =
+        G.shortest_path
+          (module struct
+            module Vertex = struct
+              type t = vertex
+              type set = vertices
+              let universe = n
+              let iter_adjacencies v f =
+                Fun.flip List.iter (Array.get adj v) @@ fun e ->
+                  if 0 < Flow.compare e.capacity Flow.zero then f e.dst
+            end
+          end) s in
       if max_int <= level t
       then flow
       else

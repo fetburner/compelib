@@ -7,7 +7,16 @@ end
 
 module IntMap = Map.Make (Int)
 
-module G = Compelib.Dijkstra.F (Int)
+module G = Compelib.Dijkstra.F
+  (struct
+    type t = int array
+    type key = int
+    type elt = int
+    type size = int
+    let make = Fun.flip Array.make max_int
+    let get = Array.get
+    let set = Array.set
+  end)
   (struct
     type t = int list IntMap.t ref
     type elt = int
@@ -22,15 +31,6 @@ module G = Compelib.Dijkstra.F (Int)
     let add q w v  =
       q := IntMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
-  (struct
-    type t = int array
-    type key = int
-    type elt = int
-    type size = int
-    let make = Fun.flip Array.make max_int
-    let get = Array.get
-    let set = Array.set
-  end)
 
 let e =
   [|[ (1, 7); (2, 9); (5, 14) ];
@@ -41,13 +41,29 @@ let e =
     [ (0, 14); (2, 2); (4, 9) ]|]
 
 let%test _ =
-  ( = ) [ 0; 7; 9; 20; 20; 11; max_int ] @@
-  List.init 7 @@
-  Fun.flip (G.shortest_path 7) 0 @@
-  fun u f -> Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+  List.init 7 (G.shortest_path
+    (module struct
+      module Distance = Int
+      module Vertex = struct
+        type t = int
+        type set = int
+        let universe = 7
+        let iter_adjacencies u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+      end
+    end) 0)
+  = [ 0; 7; 9; 20; 20; 11; max_int ]
 
 (* 経路長をMapに保存する *)
-module G' = Compelib.Dijkstra.F (Int)
+module G' = Compelib.Dijkstra.F
+  (struct
+    type t = int IntMap.t ref
+    type key = int
+    type elt = int
+    type size = unit
+    let make () = ref IntMap.empty
+    let get m k = try IntMap.find k !m with Not_found -> max_int
+    let set m k x = m := IntMap.add k x !m
+  end)
   (struct
     type t = int list IntMap.t ref
     type elt = int
@@ -62,25 +78,30 @@ module G' = Compelib.Dijkstra.F (Int)
     let add q w v  =
       q := IntMap.update w (fun vs -> Some (v :: Option.value ~default:[] vs)) !q
   end)
-  (struct
-    type t = int IntMap.t ref
-    type key = int
-    type elt = int
-    type size = unit
-    let make () = ref IntMap.empty
-    let get m k = try IntMap.find k !m with Not_found -> max_int
-    let set m k x = m := IntMap.add k x !m
-  end)
 
 let%test _ =
-  ( = ) [ 0; 7; 9; 20; 20; 11; max_int; max_int; max_int; max_int ] @@
-  List.init 10 @@
-  Fun.flip (G'.shortest_path ()) 0 @@
-  fun u f -> Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+  List.init 10 (G'.shortest_path
+    (module struct
+      module Distance = Int
+      module Vertex = struct
+        type t = int
+        type set = unit
+        let universe = ()
+        let iter_adjacencies u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+      end
+    end) 0)
+  = [ 0; 7; 9; 20; 20; 11; max_int; max_int; max_int; max_int ]
 
 (* 無限グラフも可 *)
 let%test _ =
-  ( = ) [0; 1; 2; 3; 4; 5; 6; 7; 8; 9] @@
-  List.init 10 @@ 
-  Fun.flip (G'.shortest_path ()) 0 @@
-  fun u f -> f (u + 1) @@ ( + ) 1
+  List.init 10 (G'.shortest_path
+    (module struct
+      module Distance = Int
+      module Vertex = struct
+        type t = int
+        type set = unit
+        let universe = ()
+        let iter_adjacencies u f = f (u + 1) succ
+      end
+    end) 0)
+  = [0; 1; 2; 3; 4; 5; 6; 7; 8; 9]

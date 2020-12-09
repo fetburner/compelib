@@ -1,3 +1,12 @@
+module type Weighted01DirectedGraph = sig
+  module Vertex : sig
+    type t
+    type set
+    val universe : set
+    val iter_adjacencies : t -> f0:(t -> unit) -> f1:(t -> unit) -> unit
+  end
+end
+
 module F
   (Array : sig
     type t
@@ -9,11 +18,15 @@ module F
     val set : t -> key -> elt -> unit
   end)
 = struct
+  type distance = int
   type vertex = Array.key
   type vertices = Array.size
 
-  let shortest_path n es s =
-    let d = Array.make n in
+  let shortest_path
+    (module G : Weighted01DirectedGraph
+      with type Vertex.t = vertex
+       and type Vertex.set = vertices) s =
+    let d = Array.make G.Vertex.universe in
     (* 始点への経路長を0にする *)
     Array.set d s 0;
     let w = ref 1 in
@@ -33,7 +46,7 @@ module F
               incr w;
               bfs t
     and dfs u =
-      es u
+      G.Vertex.iter_adjacencies u
         ~f0:(fun v ->
           if !w <= Array.get d v then
             (Array.set d v (!w - 1); dfs v))
