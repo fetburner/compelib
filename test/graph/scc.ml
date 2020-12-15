@@ -35,7 +35,7 @@ module G = struct
       then acc
       else foldn (n - 1) f (f n acc)
     let fold_universe f acc = foldn universe f acc
-    let fold_adjacencies v f acc =
+    let fold_successors v f acc =
       List.fold_right f
         begin match v with
         | 1 -> [2]
@@ -46,11 +46,22 @@ module G = struct
         | 6 -> []
         | 7 -> []
         end acc
+    let fold_predecessors v f acc =
+      List.fold_right f
+        begin match v with
+        | 1 -> [3]
+        | 2 -> [1]
+        | 3 -> [2]
+        | 4 -> [3; 5]
+        | 5 -> [4]
+        | 6 -> [5]
+        | 7 -> [5]
+        end acc
   end
 end
 
 let%test _ =
   List.map (List.sort_uniq compare) (N.scc (module G))
-  = List.map (List.sort_uniq compare) [[2; 3; 1]; [4; 5]; [6]; [7]]
+  = List.map (List.sort_uniq compare) [[2; 3; 1]; [4; 5]; [7]; [6]]
 
 let%test _ = M.sort (module G) = [3; 1; 2; 5; 4; 6; 7]

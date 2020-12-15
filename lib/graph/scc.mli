@@ -8,7 +8,8 @@ module type UnweightedDirectedGraph = sig
     (* 頂点に含まれる集合の畳み込み *)
     val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
     (* 隣接する頂点の畳み込み *)
-    val fold_adjacencies : t -> (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_successors : t -> (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_predecessors : t -> (t -> 'a -> 'a) -> 'a -> 'a
   end
 end
 

@@ -4,7 +4,8 @@ module type UnweightedDirectedGraph = sig
     type set
     val universe : set
     val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
-    val fold_adjacencies : t -> (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_successors : t -> (t -> 'a -> 'a) -> 'a -> 'a
+    val fold_predecessors : t -> (t -> 'a -> 'a) -> 'a -> 'a
   end
 end
 
@@ -39,7 +40,7 @@ module F
     let rec visit v l =
       if A.get vs v
       then l
-      else (A.set vs v true; L.cons v (G.Vertex.fold_adjacencies v visit l)) in
+      else (A.set vs v true; L.cons v (G.Vertex.fold_successors v visit l)) in
     visit
 
   let sort
@@ -63,15 +64,23 @@ module G
       with type Vertex.t = vertex
        and type Vertex.set = vertices) =
     let vs = A.make G.Vertex.universe in
+    let module G' = struct
+      module Vertex = struct
+        include G.Vertex
+        let fold_successors = G.Vertex.fold_predecessors
+        let fold_predecessors = G.Vertex.fold_successors
+      end
+    end in
     let module M = F (A) (L) in
     let module N = F (A)
       (struct
-        include LL
+        type t = LL.t -> LL.t
         type elt = vertex
-        let cons v l =
+        let nil = Fun.id
+        let cons v k l = k @@
           if A.get vs v
           then l
           else LL.cons (M.visit (module G) vs v L.nil) l
       end) in
-    N.sort (module G)
+    N.sort (module G') LL.nil
 end
