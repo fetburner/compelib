@@ -1,15 +1,16 @@
-(* 重み付き無向グラフ *)
+(* 無向グラフ *)
 module type UnweightedDirectedGraph = sig
   module Vertex : sig
     type t
     type set
     (* グラフに含まれる頂点の集合 *)
     val universe : set
+    (* 頂点の等価性判定 *)
+    val eq : t -> t -> bool
     (* 頂点に含まれる集合の畳み込み *)
-    val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
+    val iter_universe : (t -> unit) -> unit
     (* 隣接する頂点の畳み込み *)
-    val fold_successors : t -> (t -> 'a -> 'a) -> 'a -> 'a
-    val fold_predecessors : t -> (t -> 'a -> 'a) -> 'a -> 'a
+    val iter_adjacencies : t -> (t -> unit) -> unit
   end
 end
 
@@ -32,29 +33,9 @@ module type Array = sig
 end
 
 module F
-  (* 頂点を添字，真偽値を要素とした配列の実装
-     A.make は false で初期化された配列を返さなくてはならない *)
-  (A : Array with type elt = bool)
-  (* 頂点のリスト *)
-  (L : List with type elt = A.key)
-: sig
-  type vertex = A.key
-  type vertices = A.size
-
-  (* トポロジカルソート *)
-  val sort :
-    (* 有向グラフ *)
-    (module UnweightedDirectedGraph
-      with type Vertex.t = vertex
-       and type Vertex.set = vertices) ->
-    (* 頂点をトポロジカルソートしたリスト *)
-    L.t
-end
-
-module G
-  (* 頂点を添字，真偽値を要素とした配列の実装
-     A.make は false で初期化された配列を返さなくてはならない *)
-  (A : Array with type elt = bool)
+  (* 頂点を添字，整数値を要素とした配列の実装
+     A.make は 0 で初期化された配列を返さなくてはならない *)
+  (A : Array with type elt = int)
   (* 頂点のリスト *)
   (L : List with type elt = A.key)
   (* 頂点のリストのリスト *)
