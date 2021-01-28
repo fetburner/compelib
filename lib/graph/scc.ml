@@ -3,9 +3,9 @@ module type UnweightedDirectedGraph = sig
     type t
     type set
     val universe : set
-    val fold_universe : (t -> 'a -> 'a) -> 'a -> 'a
-    val fold_successors : t -> (t -> 'a -> 'a) -> 'a -> 'a
-    val fold_predecessors : t -> (t -> 'a -> 'a) -> 'a -> 'a
+    val eq : t -> t -> bool
+    val iter_universe : (t -> unit) -> unit
+    val iter_adjacencies : t -> (t -> unit) -> unit
   end
 end
 
@@ -27,32 +27,7 @@ module type Array = sig
 end
 
 module F
-  (A : Array with type elt = bool)
-  (L : List with type elt = A.key)
-= struct
-  type vertex = A.key
-  type vertices = A.size
-
-  let visit
-    (module G : UnweightedDirectedGraph
-      with type Vertex.t = vertex
-      and type Vertex.set = vertices) vs =
-    let rec visit v l =
-      if A.get vs v
-      then l
-      else (A.set vs v true; L.cons v (G.Vertex.fold_successors v visit l)) in
-    visit
-
-  let sort
-    (module G : UnweightedDirectedGraph
-      with type Vertex.t = vertex
-       and type Vertex.set = vertices) =
-    let vs = A.make G.Vertex.universe in
-    G.Vertex.fold_universe (visit (module G) vs) L.nil
-end
-
-module G
-  (A : Array with type elt = bool)
+  (A : Array with type elt = int)
   (L : List with type elt = A.key)
   (LL : List with type elt = L.t)
 = struct
@@ -63,24 +38,31 @@ module G
     (module G : UnweightedDirectedGraph
       with type Vertex.t = vertex
        and type Vertex.set = vertices) =
-    let vs = A.make G.Vertex.universe in
-    let module G' = struct
-      module Vertex = struct
-        include G.Vertex
-        let fold_successors = G.Vertex.fold_predecessors
-        let fold_predecessors = G.Vertex.fold_successors
-      end
-    end in
-    let module M = F (A) (L) in
-    let module N = F (A)
-      (struct
-        type t = LL.t -> LL.t
-        type elt = vertex
-        let nil = Fun.id
-        let cons v k l = k @@
-          if A.get vs v
-          then l
-          else LL.cons (M.visit (module G) vs v L.nil) l
-      end) in
-    N.sort (module G') LL.nil
+    let tm = ref 0 in
+    let scc = ref LL.nil in
+    let st = Stack.create () in
+    let cmp = A.make G.Vertex.universe in
+    let ord = A.make G.Vertex.universe in
+    let low = A.make G.Vertex.universe in
+    let rec visit u =
+      incr tm;
+      A.set ord u !tm;
+      A.set low u !tm;
+      Stack.push u st;
+      G.Vertex.iter_adjacencies u (fun v ->
+        if A.get ord v = 0
+        then (visit v; A.set low u (min (A.get low u) (A.get low v)))
+        else if A.get cmp v = 0
+        then A.set low u (min (A.get low u) (A.get ord v)));
+      if A.get ord u = A.get low u then
+        let component = ref L.nil in
+        let rec loop () =
+          let v = Stack.pop st in
+          A.set cmp v 1;
+          component := L.cons v !component;
+          if not (G.Vertex.eq u v) then loop () in
+        (loop (); scc := LL.cons !component !scc) in
+    G.Vertex.iter_universe (fun v ->
+      if A.get ord v <= 0 then visit v);
+    !scc
 end

@@ -1,9 +1,9 @@
 module A = struct
-  type t = bool array
+  type t = int array
   type key = int
-  type elt = bool
+  type elt = int
   type size = int
-  let make n = Array.make (n + 1) false
+  let make = Fun.flip Array.make 0
   let get = Array.get
   let set = Array.set
 end
@@ -22,46 +22,31 @@ module LL = struct
   let cons = List.cons
 end
 
-module M = Compelib.Scc.F (A) (L)
-module N = Compelib.Scc.G (A) (L) (LL)
+module M = Compelib.Scc.F (A) (L) (LL)
 
 module G = struct
   module Vertex = struct
     type t = int
     type set = int
+    let eq = ( = )
     let universe = 7
-    let rec foldn n f acc =
-      if n = 0
-      then acc
-      else foldn (n - 1) f (f n acc)
-    let fold_universe f acc = foldn universe f acc
-    let fold_successors v f acc =
-      List.fold_right f
-        begin match v with
-        | 1 -> [2]
-        | 2 -> [3]
-        | 3 -> [1; 4]
-        | 4 -> [5]
-        | 5 -> [4; 6; 7]
-        | 6 -> []
-        | 7 -> []
-        end acc
-    let fold_predecessors v f acc =
-      List.fold_right f
-        begin match v with
-        | 1 -> [3]
-        | 2 -> [1]
-        | 3 -> [2]
-        | 4 -> [3; 5]
-        | 5 -> [4]
-        | 6 -> [5]
-        | 7 -> [5]
-        end acc
+    let iter_universe f =
+      for u = 0 to universe - 1 do
+        f u
+      done
+    let iter_adjacencies u f =
+      List.iter f @@
+      match u with
+      | 0 -> [1]
+      | 1 -> [2]
+      | 2 -> [0; 3]
+      | 3 -> [4]
+      | 4 -> [3; 5; 6]
+      | 5 -> []
+      | 6 -> []
   end
 end
 
 let%test _ =
-  List.map (List.sort_uniq compare) (N.scc (module G))
-  = List.map (List.sort_uniq compare) [[2; 3; 1]; [4; 5]; [7]; [6]]
-
-let%test _ = M.sort (module G) = [3; 1; 2; 5; 4; 6; 7]
+  List.map (List.sort_uniq compare) (M.scc (module G))
+  = List.map (List.sort_uniq compare) [[1; 2; 0]; [3; 4]; [6]; [5]]
