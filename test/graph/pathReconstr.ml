@@ -11,20 +11,10 @@ module IntMap = Map.Make (Int)
 
 module G = Compelib.Dijkstra.F
   (struct
-    type t = int array
-    type key = int
-    type elt = int
-    type size = int
-    let make = Fun.flip Array.make max_int
-    let get = Array.get
-    let set = Array.set
-  end)
-  (struct
     type t = int list IntMap.t ref
     type elt = int
     type key = int
-    type size = int
-    let make _ = ref IntMap.empty
+    let create () = ref IntMap.empty
     let take_min_binding q =
       match IntMap.min_binding !q with
       | exception Not_found -> None
@@ -43,14 +33,15 @@ let e =
     [ (0, 14); (2, 2); (4, 9) ]|]
 
 let d =
+  let d = Array.make 7 max_int in
   G.shortest_path
     (module struct
       module Distance = Int
       module Vertex = struct
         type t = int
-        type set = int
-        let universe = 7
-        let iter_adjacencies u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ ( + ) c
+        let get_distance = Array.get d
+        let set_distance = Array.set d
+        let iter_adjacencies u f = Fun.flip List.iter e.(u) @@ fun (v, c) -> f v @@ d.(u) + c
       end
     end) 0
 

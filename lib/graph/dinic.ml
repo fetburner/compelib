@@ -26,16 +26,6 @@ module F
   type capacity = Flow.t
   type vertices = Array.size
 
-  module G = Bfs.F (struct
-    type t = int Array.t
-    type key = vertex
-    type elt = int
-    type size = vertices
-    let make = Fun.flip Array.make max_int
-    let get = Array.get
-    let set = Array.set
-  end)
-
   type edge =
     { rev : edge;
       src : vertex;
@@ -75,12 +65,13 @@ module F
 
     let rec outer flow =
       let level =
-        G.shortest_path
+        let d = Array.make n max_int in
+        Bfs.shortest_path
           (module struct
             module Vertex = struct
               type t = vertex
-              type set = vertices
-              let universe = n
+              let get_distance = Array.get d
+              let set_distance = Array.set d
               let iter_adjacencies v f =
                 Fun.flip List.iter (Array.get adj v) @@ fun e ->
                   if 0 < Flow.compare e.capacity Flow.zero then f e.dst

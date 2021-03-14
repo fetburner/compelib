@@ -1,13 +1,3 @@
-module G = Compelib.Bfs.F (struct
-  type t = (int, Bigarray.int_elt, Bigarray.c_layout) Bigarray.Genarray.t
-  type elt = int
-  type key = int array
-  type size = int array
-  let make n = let d = Bigarray.Genarray.create Bigarray.int Bigarray.c_layout n in Bigarray.Genarray.fill d max_int; d
-  let get = Bigarray.Genarray.get
-  let set = Bigarray.Genarray.set
-end)
-
 let maze =
   [|"......";
     ".#####";
@@ -15,12 +5,15 @@ let maze =
     "..##..";
     "#....."|]
 
-let d = G.shortest_path
+let d =
+  let d = Bigarray.Genarray.create Bigarray.int Bigarray.c_layout [| 6; 5 |] in
+  Bigarray.Genarray.fill d max_int;
+  Compelib.Bfs.shortest_path
   (module struct
     module Vertex = struct
       type t = int array
-      type set = int array
-      let universe = [| 6; 5 |]
+      let get_distance = Bigarray.Genarray.get d
+      let set_distance = Bigarray.Genarray.set d
       let iter_adjacencies [| i; j |] f =
         List.iter (fun ([| i; j |] as v) ->
           match maze.(j).[i] = '.' with

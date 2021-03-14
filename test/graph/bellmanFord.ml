@@ -2,9 +2,7 @@
 
 module V = struct
   type t = int
-  type set = int
-  let universe = 8
-  let cardinal_universe = 8
+  let cardinal = 8
   let compare = compare
 end
 
@@ -16,21 +14,15 @@ module D = struct
   let compare = compare
 end
 
-module G = Compelib.BellmanFord.F
-  (struct
-    type t = int array
-    type key = int
-    type elt = int
-    type size = int
-    let make = Fun.flip Array.make max_int
-    let get = Array.get
-    let set = Array.set
-  end)
-
 let%test _ =
-  List.init 8 (G.shortest_path
+  let d = Array.make 8 max_int in
+  List.init 8 (Compelib.BellmanFord.shortest_path
     (module struct
-      module Vertex = V
+      module Vertex = struct
+        include V
+        let get_distance = Array.get d
+        let set_distance = Array.set d
+      end
       module Distance = D
       module Edge = struct
         type t = int * int * int
@@ -43,9 +35,14 @@ let%test _ =
   = [ max_int; 0; 1; 2; max_int; max_int; max_int; 3]
 
 let%test _ =
-  List.init 8 (G.shortest_path
+  let d = Array.make 8 max_int in
+  List.init 8 (Compelib.BellmanFord.shortest_path
     (module struct
-      module Vertex = V
+      module Vertex = struct
+        include V
+        let get_distance = Array.get d
+        let set_distance = Array.set d
+      end
       module Distance = D
       module Edge = struct
         type t = int * int * int
@@ -58,9 +55,14 @@ let%test _ =
   = [max_int; 0; 1; 2; min_int; min_int; min_int; 3]
 
 let%test _ =
-  List.init 8 (G.shortest_path
+  let d = Array.make 8 max_int in
+  List.init 8 (Compelib.BellmanFord.shortest_path
     (module struct
-      module Vertex = V
+      module Vertex = struct
+        include V
+        let get_distance = Array.get d
+        let set_distance = Array.set d
+      end
       module Distance = D
       module Edge = struct
         type t = int * int * int
