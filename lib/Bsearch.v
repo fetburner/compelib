@@ -1,4 +1,4 @@
-Require Import Bool ZArith Lia Program.
+Require Import Bool ZArith Lia Program ssreflect.
 
 Open Scope Z_scope.
 
@@ -14,76 +14,84 @@ Program Fixpoint upper_bound' l r
     (forall n H, n <= m -> p n H = true) } :=
   match Hacc with
   | Acc_intro _ Hacc' =>
-      if Z_le_gt_dec r (Z.succ l)
-      then exist _ l _
-      else
-        let m := (l + r) / 2 in
-        ( if p m _ as b return p m _ = b -> _
-          then fun _ =>
-            let (n, _) := upper_bound' m r (fun n _ => p n _) (Hacc' _ _) _ in
-            exist _ n _
-          else fun _ =>
-            let (n, _) := upper_bound' l m (fun n _ => p n _) (Hacc' _ _) _ in
-            exist _ n _ ) eq_refl
+      match Z_le_gt_dec r (Z.succ l) with
+      | left _ => exist _ l _
+      | right _ =>
+          let m := (l + r) / 2 in
+          ( if p m _ as b return p m _ = b -> _
+            then fun _ =>
+              let (n, _) := upper_bound' m r (fun n _ => p n _) (Hacc' _ _) _ in
+              exist _ n _
+            else fun _ =>
+              let (n, _) := upper_bound' l m (fun n _ => p n _) (Hacc' _ _) _ in
+              exist _ n _ ) eq_refl
+      end
   end.
-Next Obligation. auto with zarith. Qed.
+Next Obligation. by auto with zarith. Qed.
 Next Obligation.
-  split.
-  - apply (Z.div_le_lower_bound _ 2); lia.
-  - apply (Z.div_lt_upper_bound _ 2); lia.
+  by split;
+  [ apply /Z.div_le_lower_bound
+  | apply /Z.div_lt_upper_bound ]; lia.
 Qed.
 Next Obligation.
-  assert ((l + r) / 2 < r).
-  { apply Z.div_lt_upper_bound; lia. }
-  assert (l <= (l + r) / 2).
-  { apply Z.div_le_lower_bound; lia. }
-  apply Z2Nat.inj_lt; simpl; lia.
+  suff [ ? ? ] : (l + r) / 2 < r /\ l <= (l + r) / 2 by apply /Z2Nat.inj_lt => /=; lia.
+  by split;
+  [ apply /Z.div_lt_upper_bound
+  | apply /Z.div_le_lower_bound ]; lia.
 Qed.
 Next Obligation.
-  assert ((l + r) / 2 < r).
-  { apply Z.div_lt_upper_bound; lia. }
-  lia.
+  suff : (l + r) / 2 < r by lia.
+  by apply Z.div_lt_upper_bound; lia.
 Qed.
 Next Obligation.
-  replace n with H; auto with zarith.
-  assert (n <= H) by eapply l0, H4, Z.le_refl.
-  assert (H <= n) by eapply H3, e, Z.le_refl.
-  lia.
+  suff -> : n = H by [].
+  apply /Z.le_antisymm.
+  - by eapply l0, H3, Z.le_refl.
+  - by eapply H2, e, Z.le_refl.
   Unshelve.
-  - auto.
-  - destruct (Z_le_gt_dec ((l + r) / 2) H) as [ Hle | ]; auto with zarith.
-    generalize H1. erewrite (e _ _ Hle). congruence.
+  + by [].
+  + case (Z_le_gt_dec ((l + r) / 2) H) => [ Hle | ]; auto with zarith.
+    by move: (e) (H0) => ->.
 Qed.
 Next Obligation.
   exists H. repeat split; eauto.
-  destruct (Z_le_gt_dec ((l + r) / 2) H) as [ Hle | ]; auto with zarith.
-  generalize H1. erewrite (e _ _ Hle). congruence.
+  case (Z_le_gt_dec ((l + r) / 2) H) => [ Hle | ]; auto with zarith.
+  by move: (e) (H0) => ->.
 Qed.
 Next Obligation.
-  assert (Z.succ l <= (l + r) / 2).
-  { apply Z.div_le_lower_bound; lia. }
-  assert ((l + r) / 2 <= r).
-  { apply Z.div_le_upper_bound; lia. }
-  apply Z2Nat.inj_lt; simpl; lia.
+  suff [ ? ? ] : Z.succ l <= (l + r) / 2 /\ (l + r) / 2 <= r by apply /Z2Nat.inj_lt => /=; lia.
+  by split;
+  [ apply /Z.div_le_lower_bound
+  | apply /Z.div_le_upper_bound ]; lia.
 Qed.
 Next Obligation.
-  assert (Z.succ l <= (l + r) / 2).
-  { apply Z.div_le_lower_bound; lia. }
-  lia.
+  suff : Z.succ l <= (l + r) / 2 by lia.
+  by apply /Z.div_le_lower_bound; lia.
 Qed.
 Next Obligation.
-  replace n with H; eauto.
-  assert (H <= n) by eapply H3, e, Z.le_refl.
-  assert (n <= H) by eapply l0, H4, Z.le_refl.
-  lia.
+  suff -> : n = H by [].
+  have ? : H <= n by eapply H2, e, Z.le_refl.
+  have ? : n <= H by eapply l0, H3, Z.le_refl.
+  by lia.
   Unshelve.
-  - eauto.
-  - lia.
+  - by eauto.
+  - by lia.
 Qed.
-Next Obligation. eauto 8. Qed.
+Next Obligation. by eauto 8. Qed.
 
-Definition upper_bound l r p :=
-  upper_bound' l r p (well_founded_ltof _ _ _).
+Program Definition upper_bound l r p :
+  (exists2 m, l <= m < r & forall n H, p n H = true <-> n <= m) ->
+  { m | l <= m < r & forall n H, p n H = true <-> n <= m } := fun _ =>
+  let (m, _) := upper_bound' l r p (well_founded_ltof _ _ _) _ in
+  exist2 _ _ m _ _.
+Next Obligation.
+  exists H. (repeat split) => // ? ? /H1; by apply.
+Qed.
+Next Obligation.
+  split.
+  - exact /H1.
+  - exact /H2.
+Qed.
 
 Program Fixpoint lower_bound' l r
   (p : forall n, l < n <= r -> bool)
@@ -97,76 +105,85 @@ Program Fixpoint lower_bound' l r
     (forall n H, m <= n -> p n H = true) } :=
   match Hacc with
   | Acc_intro _ Hacc' =>
-      if Z_le_gt_dec r (Z.succ l)
-      then exist _ r _
-      else
-        let m := (l + r) / 2 in
-        ( if p m _ as b return p m _ = b -> _
-          then fun _ =>
-            let (n, _) := lower_bound' l m (fun n _ => p n _) (Hacc' _ _) _ in
-            exist _ n _
-          else fun _ =>
-            let (n, _) := lower_bound' m r (fun n _ => p n _) (Hacc' _ _) _ in
-            exist _ n _ ) eq_refl
+      match Z_le_gt_dec r (Z.succ l) with
+      | left _ => exist _ r _
+      | right _ =>
+          let m := (l + r) / 2 in
+          ( if p m _ as b return p m _ = b -> _
+            then fun _ =>
+              let (n, _) := lower_bound' l m (fun n _ => p n _) (Hacc' _ _) _ in
+              exist _ n _
+            else fun _ =>
+              let (n, _) := lower_bound' m r (fun n _ => p n _) (Hacc' _ _) _ in
+              exist _ n _ ) eq_refl
+      end
   end.
 Next Obligation. auto with zarith. Qed.
 Next Obligation.
   split.
-  - assert (Z.succ l <= (l + r) / 2) by (apply (Z.div_le_lower_bound _ 2); lia). lia.
-  - apply (Z.div_le_upper_bound _ 2); lia.
+  - suff : Z.succ l <= (l + r) / 2 by lia.
+    by apply /Z.div_le_lower_bound; lia.
+  - by apply /Z.div_le_upper_bound; lia.
 Qed.
 Next Obligation.
-  assert ((l + r) / 2 <= r).
-  { apply Z.div_le_upper_bound; lia. }
-  assert (Z.succ l <= (l + r) / 2).
-  { apply Z.div_le_lower_bound; lia. }
-  apply Z2Nat.inj_lt; simpl; lia.
+  suff [ ? ? ] : (l + r) / 2 <= r /\ Z.succ l <= (l + r) / 2 by apply /Z2Nat.inj_lt => /=; lia.
+  split;
+  [ apply /Z.div_le_upper_bound
+  | apply /Z.div_le_lower_bound ]; lia.
 Qed.
 Next Obligation.
-  assert (Z.succ l <= (l + r) / 2).
-  { apply Z.div_le_lower_bound; lia. }
-  lia.
+  suff : Z.succ l <= (l + r) / 2 by lia.
+  by apply /Z.div_le_lower_bound; lia.
 Qed.
 Next Obligation.
-  replace n with H; eauto.
-  assert (n <= H) by eapply H3, e, Z.le_refl.
-  assert (H <= n) by eapply l0, H4, Z.le_refl.
-  lia.
+  suff -> : n = H by [].
+  apply /Z.le_antisymm.
+  - by eapply H2, e, Z.le_refl.
+  - by eapply l0, H3, Z.le_refl.
   Unshelve.
-  - destruct (Z_le_gt_dec H ((l + r) / 2)) as [ Hle | ]; try lia.
-    generalize H1. erewrite (e _ _ Hle). congruence.
-  - eauto.
+  + case (Z_le_gt_dec H ((l + r) / 2)) => [ Hle | ]; auto with zarith.
+    by move: (e) (H0) => ->.
+  + by [].
 Qed.
 Next Obligation.
   exists H. repeat split; eauto.
-  destruct (Z_le_gt_dec H ((l + r) / 2)) as [ Hle | ]; try lia.
-  generalize H1. erewrite (e _ _ Hle). congruence.
+  case (Z_le_gt_dec H ((l + r) / 2)) => [ Hle | ]; auto with zarith.
+  by move: (e) (H0) => ->.
 Qed.
 Next Obligation.
-  assert (l <= (l + r) / 2).
-  { apply Z.div_le_lower_bound; lia. }
-  assert ((l + r) / 2 < r).
-  { apply Z.div_lt_upper_bound; lia. }
-  apply Z2Nat.inj_lt; simpl; lia.
+  suff [ ? ? ] : l <= (l + r) / 2 /\ (l + r) / 2 < r by apply Z2Nat.inj_lt => /=; lia.
+  split;
+  [ apply /Z.div_le_lower_bound
+  | apply /Z.div_lt_upper_bound ]; lia.
 Qed.
 Next Obligation.
-  assert ((l + r) / 2 < r).
-  { apply Z.div_lt_upper_bound; lia. }
-  lia.
+  suff : (l + r) / 2 < r by lia.
+  by apply /Z.div_lt_upper_bound; lia.
 Qed.
 Next Obligation.
-  replace n with H; auto.
-  assert (H <= n) by eapply l0, H4, Z.le_refl.
-  assert (n <= H) by eapply H3, e, Z.le_refl.
-  lia.
+  suff -> : n = H by [].
+  have ? : H <= n by eapply l0, H3, Z.le_refl.
+  have ? : n <= H by eapply H2, e, Z.le_refl.
+  by lia.
   Unshelve.
-  - auto.
-  - auto with zarith.
+  - by auto.
+  - by lia.
 Qed.
-Next Obligation. eauto 8. Qed.
+Next Obligation. by eauto 8. Qed.
 
-Definition lower_bound l r p :=
-  lower_bound' l r p (well_founded_ltof _ _ _).
+Program Definition lower_bound l r p :
+  (exists2 m, l < m <= r & forall n H, p n H = true <-> m <= n) ->
+  { m | l < m <= r & forall n H, p n H = true <-> m <= n } := fun _ =>
+  let (m, _) := lower_bound' l r p (well_founded_ltof _ _ _) _ in
+  exist2 _ _ m _ _.
+Next Obligation.
+  exists H. (repeat split) => // ? ? /H1; by apply.
+Qed.
+Next Obligation.
+  split.
+  - exact /H1.
+  - exact /H2.
+Qed.
 
 Extract Inductive bool => "bool" ["true" "false"].
 Extract Inductive sumbool => "bool" ["true" "false"].
