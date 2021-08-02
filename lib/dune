@@ -1,4 +1,4 @@
-(copy_files# tree/*.{ml,mli})
+(copy_files tree/*.{ml,mli,v})
 (copy_files# graph/*.{ml,mli})
 (copy_files# container/*.{ml,mli})
 
@@ -13,5 +13,9 @@
 (coq.extraction
   (prelude Regexp)
   (extracted_modules regexp))
+
+(coq.extraction
+  (prelude DoublingLca)
+  (extracted_modules doublingLca))
 
 (library (name compelib))

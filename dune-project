@@ -15,4 +15,5 @@
   (synopsis "OCaml competive programming library")
   (depends
     (coq (>= 8.10))
+    (coq-mathcomp-ssreflect (>= 1.6))
     (ppx_inline_test (>= 0.14.1))))
