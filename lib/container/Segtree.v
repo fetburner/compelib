@@ -8,9 +8,18 @@ Lemma double_half n : n./2.*2 = n - odd n.
 Proof. lia. Qed.
 
 Section Segtree.
-  Variable A : eqType.
+  Variable A : Set.
+  Hypothesis eqA : A -> A -> bool.
+  Hypothesis eqAP : Equality.axiom (T:=A) eqA.
   Variable idm : A.
-  Hypothesis mul : Monoid.law idm.
+  Variable mul : A -> A -> A.
+  Hypothesis mulA : associative mul.
+  Hypothesis mul1m : left_id idm mul.
+  Hypothesis mulm1 : right_id idm mul.
+
+  Definition A_eqMixin := EqMixin eqAP.
+  Canonical A_eqType := Eval hnf in EqType _ A_eqMixin.
+  Canonical mul_monoid := Monoid.Law mulA mul1m mulm1.
   Local Notation "x * y" := (mul x y).
 
   Lemma accumulated_product f g l : forall r,
@@ -218,7 +227,7 @@ Section Segtree.
       - rewrite double_half double_uphalf -Monoid.mulmA -big_cat_nat; try lia.
         case: ifPn => ?.
         + by have -> : m - odd m = m by lia.
-        + rewrite -(@big_nat1 _ idm mul _ (nth idm leaves)) -Monoid.mulmA -big_cat_nat //; try lia.
+        + rewrite -(@big_nat1 _ idm mul_monoid _ (nth idm leaves)) -Monoid.mulmA -big_cat_nat //; try lia.
           rewrite Hub; try lia.
           case: ifPn => ?.
           * by have -> : (m - odd m).+1 = m by lia.
@@ -379,7 +388,7 @@ Section Segtree.
       - rewrite double_half double_uphalf Monoid.mulmA -big_cat_nat; try lia.
         case: ifPn => ?.
         + by have -> : odd m + m = m by lia.
-        + rewrite -(@big_nat1 _ idm mul _ (nth idm leaves)) Monoid.mulmA prednK -?big_cat_nat ?Hlb; try lia.
+        + rewrite -(@big_nat1 _ idm mul_monoid _ (nth idm leaves)) Monoid.mulmA prednK -?big_cat_nat ?Hlb; try lia.
           case: ifPn => ?.
           * by have -> : (odd m + m).-1 = m by lia.
           * by have -> : odd m + m = m by lia.
@@ -492,3 +501,31 @@ Section Segtree.
     exact /lower_bound_correct.
   Qed.
 End Segtree.
+
+Module Type Monoid.
+  Parameter t : Set.
+  Parameter eq : t -> t -> bool.
+  Parameter e : t.
+  Parameter op : t -> t -> t.
+End Monoid.
+
+Module F (M : Monoid).
+  Definition product := product' M.t M.e M.op.
+  Definition upper_bound := upper_bound' M.t M.e M.op.
+  Definition lower_bound := lower_bound' M.t M.e M.op.
+End F.
+
+Extract Inductive prod => "( * )" [ "" ].
+Extract Inductive bool => "bool" ["true" "false"].
+Extract Inductive nat => int [ "0" "succ" ]
+ "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
+Extract Inlined Constant negb => "not".
+Extract Inlined Constant leq => "( <= )".
+Extract Inlined Constant addn => "( + )".
+Extract Inlined Constant subn => "( - )".
+Extract Inlined Constant Nat.pred => "pred".
+Extract Inlined Constant half => "(fun n -> n / 2)".
+Extract Inlined Constant double => "(fun n -> n + n)".
+Extract Inlined Constant odd => "(fun n -> 0 < n mod 2)".
+Extract Inlined Constant uphalf => "(fun n -> (n + 1) / 2)".
+Extraction "segtreeQueries.ml" F.
