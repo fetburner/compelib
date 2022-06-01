@@ -503,18 +503,6 @@ Section Segtree.
   Qed.
 End Segtree.
 
-Module Type Monoid.
-  Parameter t : Set.
-  Parameter e : t.
-  Parameter op : t -> t -> t.
-End Monoid.
-
-Module F (M : Monoid).
-  Definition product := product' M.t M.e M.op.
-  Definition upper_bound := upper_bound' M.t M.e M.op.
-  Definition lower_bound := lower_bound' M.t M.e M.op.
-End F.
-
 Extract Inductive prod => "( * )" [ "" ].
 Extract Inductive bool => "bool" ["true" "false"].
 Extract Inductive nat => int [ "0" "succ" ]
