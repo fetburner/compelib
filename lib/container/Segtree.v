@@ -7,6 +7,8 @@ Proof. lia. Qed.
 Lemma double_half n : n./2.*2 = n - odd n.
 Proof. lia. Qed.
 
+Definition lsb n := nat_of_bool (odd n).
+
 Section Segtree.
   Variable A : Set.
   Hypothesis eqA : A -> A -> bool.
@@ -37,7 +39,7 @@ Section Segtree.
   Lemma left_segment f l :
     (if odd l then f l else idm) = \big[mul/idm]_(l <= i < odd l + l) f i.
   Proof.
-    case (odd l).
+    case: ifP.
     - by rewrite big_nat1.
     - by rewrite big_geq.
   Qed.
@@ -51,7 +53,7 @@ Section Segtree.
   Lemma right_segment f r :
     (if odd r then f r.-1 else idm) = \big[mul/idm]_(r - odd r <= i < r) f i.
   Proof.
-    case (boolP (odd r)) => [ /odd_gt0 /prednK {3}<- | ].
+    case: ifP => [ /odd_gt0 /prednK {3}<- | ].
     - by rewrite subn1 big_nat1.
     - by rewrite big_geq //; lia.
   Qed.
@@ -97,7 +99,7 @@ Section Segtree.
   Proof.
     elim => /= [ | parents ? IH ] l r ? ? leaves
          => [ /eqP -> /= | /andP [ /andP [ /eqP Hsize /forallP Hacc ] ? ] ] ?;
-      case (leqP r l) => [ ? | Hlr ].
+      case: ifP => ?.
     - by rewrite big_geq ?Monoid.mulm1.
     - lia.
     - by rewrite big_geq // Monoid.mulm1.
@@ -119,30 +121,29 @@ Section Segtree.
     by rewrite Monoid.mulm1 Monoid.mul1m.
   Qed.
 
-  Function product_rec' segtree m n l r lp rp {measure id r} :=
+  Function product_iter_rec segtree m n l r lp rp {measure id r} :=
     if r <= l
     then lp * rp
     else
-      product_rec' segtree m./2 (n + m) (uphalf l) r./2
+      product_iter_rec segtree m./2 (n + m) (uphalf l) r./2
         (if odd l then lp * segtree (n + l) else lp)
         (if odd r then segtree (n + r.-1) * rp else rp).
   Proof. by lia. Defined.
 
-  Definition product' segtree m l r :=
-    product_rec' segtree m 0 l r idm idm.
+  Definition product_iter segtree m l r :=
+    product_iter_rec segtree m 0 l r idm idm.
 
   Lemma product_rec_correspondence segtree : forall rest_nodes leaves n l r lp rp,
     valid_segtree leaves rest_nodes ->
     r <= size leaves ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree (n + i) = nth idm (leaves ++ encode rest_nodes) i) ->
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree (n + i) = nth idm (leaves ++ encode rest_nodes) i) ->
     product_rec l r lp rp leaves rest_nodes
-      = product_rec' segtree (size leaves) n l r lp rp.
+      = product_iter_rec segtree (size leaves) n l r lp rp.
   Proof.
     elim => /= [ | ? ? IH ] leaves ? l r ? ?
          => [ /eqP -> /= | /andP [ /andP [ /eqP Hsize ? ] ? ] ] Hbound Hsegtree;
-      rewrite product_rec'_equation;
+      rewrite product_iter_rec_equation;
       case (leqP r l) => //= Hlr.
     - lia.
     - rewrite -Hsize !Hsegtree; try lia.
@@ -158,21 +159,19 @@ Section Segtree.
   Lemma product_correspondence rest_nodes leaves segtree l r :
     valid_segtree leaves rest_nodes ->
     r <= size leaves ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
-    product' segtree (size leaves) l r = product l r (leaves, rest_nodes).
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
+    product_iter segtree (size leaves) l r = product l r (leaves, rest_nodes).
   Proof.
-    by rewrite /product' /product => /product_rec_correspondence Hvalid /Hvalid Hbound /(Hbound _ 0).
+    by rewrite /product_iter /product => /product_rec_correspondence Hvalid /Hvalid Hbound /(Hbound _ 0).
   Qed.
 
-  Theorem product'_correct rest_nodes leaves segtree l r :
+  Theorem product_iter_correct rest_nodes leaves segtree l r :
     valid_segtree leaves rest_nodes ->
     r <= size leaves ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
-    product' segtree (size leaves) l r
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
+    product_iter segtree (size leaves) l r
       = \big[mul/idm]_(l <= i < r) nth idm leaves i.
   Proof.
     move => ? ? ?.
@@ -181,8 +180,8 @@ Section Segtree.
 
   Variable P : pred A.
 
-  Fixpoint upper_bound_rec {B} l r p leaves rest_nodes (cont : nat -> A -> B) :=
-    if r <= l
+  Fixpoint upper_bound_rec {B} l p leaves rest_nodes (cont : nat -> A -> B) :=
+    if size leaves <= l
     then cont l p
     else
       let p' := if odd l then p * nth idm leaves l else p in
@@ -190,8 +189,8 @@ Section Segtree.
       then cont l p
       else
         if rest_nodes is parents :: rest_nodes'
-        then upper_bound_rec (uphalf l) r./2 p' parents rest_nodes' (fun m p =>
-          if r <= m.*2
+        then upper_bound_rec (uphalf l) p' parents rest_nodes' (fun m p =>
+          if size leaves <= m.*2
           then cont m.*2 p
           else
             let p' := p * nth idm leaves m.*2 in
@@ -200,22 +199,21 @@ Section Segtree.
             else cont m.*2 p)
         else cont l p.
 
-  Definition upper_bound l r leaves rest_nodes :=
-    upper_bound_rec l r idm leaves rest_nodes pair.
+  Definition upper_bound l leaves rest_nodes :=
+    upper_bound_rec l idm leaves rest_nodes pair.
 
-  Lemma upper_bound_rec_correct B : forall rest_nodes m l r p leaves cont,
+  Lemma upper_bound_rec_correct B : forall rest_nodes m l p leaves cont,
     valid_segtree leaves rest_nodes ->
     (forall k, k <= size leaves ->
-               P (p * \big[mul/idm]_(l <= i < k) nth idm leaves i) = (k <= m)) ->
-    r <= size leaves ->
-    m <= r ->
+          P (p * \big[mul/idm]_(l <= i < k) nth idm leaves i) = (k <= m)) ->
+    m <= size leaves ->
     l <= m ->
-    @upper_bound_rec B l r p leaves rest_nodes cont
+    @upper_bound_rec B l p leaves rest_nodes cont
       = cont m (p * \big[mul/idm]_(l <= i < m) nth idm leaves i).
   Proof.
-    elim => /= [ | parents ? IH ] m l r ? leaves ?
-         => [ /eqP -> ? | /andP [ /andP [ /eqP Hsize /forallP Hacc ] ? ] Hub ? ? ? ].
-    { do 3 rewrite leqn0 => /eqP ->.
+    elim => /= [ | parents ? IH ] m l ? leaves ?
+         => [ /eqP -> ? | /andP [ /andP [ /eqP Hsize /forallP Hacc ] ? ] Hub ? ? ].
+    { do 2 rewrite leqn0 => /eqP ->.
       by rewrite /= big_geq // Monoid.mulm1. }
     case: ifPn => ?.
     { rewrite (@anti_leq l m); try lia.
@@ -224,7 +222,7 @@ Section Segtree.
     case: ifPn => ?.
     { rewrite (@anti_leq l m); try lia.
       by rewrite big_geq // Monoid.mulm1. }
-    rewrite (IH m./2) => // [ | k ? | | | ]; try lia.
+    rewrite (IH m./2) => // [ | k ? | | ]; try lia.
     { rewrite (accumulated_product (nth idm parents) (nth idm leaves)) => [ | i ? ].
       - rewrite double_half double_uphalf -Monoid.mulmA -big_cat_nat; try lia.
         case: ifPn => ?.
@@ -246,106 +244,130 @@ Section Segtree.
       by have /eqP := (Hacc (Ordinal Hbound)).
   Qed.
 
-  Corollary upper_bound_correct m l r leaves rest_nodes :
+  Corollary upper_bound_correct m l leaves rest_nodes :
     valid_segtree leaves rest_nodes ->
     (forall k, k <= size leaves ->
           P (\big[mul/idm]_(l <= i < k) nth idm leaves i) = (k <= m)) ->
-    r <= size leaves ->
-    m <= r ->
+    m <= size leaves ->
     l <= m ->
-    upper_bound l r leaves rest_nodes = (m, \big[mul/idm]_(l <= i < m) nth idm leaves i).
+    upper_bound l leaves rest_nodes = (m, \big[mul/idm]_(l <= i < m) nth idm leaves i).
   Proof.
-    rewrite /upper_bound => ? Hub ? ? ?.
+    rewrite /upper_bound => ? Hub ? ?.
     by rewrite (upper_bound_rec_correct _ _ m) => // [ | ? /Hub ] /[1! Monoid.mul1m].
   Qed.
 
-  Fixpoint upper_bound_rec' {B} segtree i m n l r p (cont : nat -> A -> B) :=
-    if i is i.+1
-    then
-      if r <= l
-      then cont l p
+  Function upper_bound_iter_cont segtree m n s l p {measure id s} :=
+    if s <= 1
+    then (l, p)
+    else
+      let m := m.*2 + lsb s in
+      let n := n - m in
+      if m <= l.*2
+      then upper_bound_iter_cont segtree m n s./2 l.*2 p
       else
-        let p' := if odd l then p * segtree (n + l) else p in
-        if odd l && ~~ P p'
-        then cont l p
-        else upper_bound_rec' segtree i m./2 (n + m) (uphalf l) r./2 p' (fun k p =>
-          if r <= k.*2
-          then cont k.*2 p
-          else
-            let p' := p * segtree (n + k.*2) in
-            if P p'
-            then cont k.*2.+1 p'
-            else cont k.*2 p)
-    else cont l p.
-
-  Definition upper_bound' segtree m l r := upper_bound_rec' segtree m m 0 l r idm pair.
-
-  Lemma upper_bound_rec_correspondence B segtree : forall rest_nodes leaves n i l r p (cont cont' : nat -> A -> B),
-    valid_segtree leaves rest_nodes ->
-    size leaves < 2 ^ i ->
-    r <= size leaves ->
-    l <= r ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree (n + i) = nth idm (leaves ++ encode rest_nodes) i) ->
-    (forall k p, k <= r -> cont k p = cont' k p) ->
-    upper_bound_rec l r p leaves rest_nodes cont
-      = upper_bound_rec' segtree i (size leaves) n l r p cont'.
+        let p' := p * segtree (n + l.*2) in
+        if P p'
+        then upper_bound_iter_cont segtree m n s./2 l.*2.+1 p'
+        else upper_bound_iter_cont segtree m n s./2 l.*2 p.
   Proof.
-    elim => /= [ | parents rest_nodes IH ] leaves ? i l r p ? ?
-         => [ /eqP -> | /andP [ /andP [ /eqP Hsize Heq ] ? ] ];
-    case: i => [ /[1! expn0] /[1! ltnS] /ltac:(do 3 rewrite leqn0 => /eqP ->) ? -> //
-               | i /[1! expnS] ? ] /=.
-    { by (do 2 rewrite leqn0 => /eqP ->) => ? ->. }
-    move => /= ? ? Hsegtree Hcont.
+    - lia.
+    - lia.
+    - lia.
+  Qed.
+
+  Function upper_bound_iter_rec segtree m n s l p {measure id m} :=
+    if m <= l
+    then upper_bound_iter_cont segtree m n s l p
+    else
+      if odd l
+      then
+        let p' := p * segtree (n + l) in
+        if P p'
+        then upper_bound_iter_rec segtree m./2 (n + m) (s.*2 + lsb m) l./2.+1 p'
+        else upper_bound_iter_cont segtree m n s l p
+      else upper_bound_iter_rec segtree m./2 (n + m) (s.*2 + lsb m) l./2 p.
+  Proof.
+    - lia.
+    - lia.
+  Defined.
+
+  Definition upper_bound_iter segtree m l :=
+    upper_bound_iter_rec segtree m 0 1 l idm.
+
+  Lemma upper_bound_iter_rec_equation' segtree m n s l p :
+    upper_bound_iter_rec segtree m n s l p
+      = if m <= l
+        then upper_bound_iter_cont segtree m n s l p
+        else
+          let p' := if odd l then p * segtree (n + l) else p in
+          if odd l && ~~ P p'
+          then upper_bound_iter_cont segtree m n s l p
+          else upper_bound_iter_rec segtree m./2 (n + m) (s.*2 + odd m) (uphalf l) p'.
+  Proof.
+    rewrite upper_bound_iter_rec_equation uphalf_half.
+    case: ifP => // ?.
+    by case: (boolP (odd l)) => //= /[1! if_neg].
+  Qed.
+
+  Lemma upper_bound_rec_correspondence segtree : forall rest_nodes leaves n s l p cont,
+    valid_segtree leaves rest_nodes ->
+    0 < s ->
+    l <= size leaves ->
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree (n + i) = nth idm (leaves ++ encode rest_nodes) i) ->
+    (forall l p, l <= size leaves ->
+            cont l p = upper_bound_iter_cont segtree (size leaves) n s l p) ->
+    upper_bound_rec l p leaves rest_nodes cont
+      = upper_bound_iter_rec segtree (size leaves) n s l p.
+  Proof.
+    elim => /= [ | parents rest_nodes IH ] leaves ? s l ? ? /[1! upper_bound_iter_rec_equation']
+         => /= [ /eqP -> /= ? /[1! leqn0] /eqP -> ? -> //
+              | /andP [ /andP [ /eqP Hsize Heq ] ? ] ? ? Hsegtree Hcont ].
     case: ifPn => [ ? /[1! Hcont] // | ? ].
     rewrite Hsegtree ?size_cat; try lia.
     rewrite -Hsize nth_cat (_: l < size leaves); try lia.
     case: ifPn => [ /[1! Hcont] // | ? ].
-    apply /IH => //= [ | | | ? ? | k ? ? ]; try lia.
+    apply /IH => //= [ | | ? ? | k ? ? ]; try lia.
     - rewrite -addnA Hsegtree ?size_cat; try lia.
       by rewrite nth_cat ltnNge leq_addr addKn.
-    - case: ifPn => // [ /[1! Hcont] // /ltac:(lia) | ? ].
-      rewrite Hsegtree ?size_cat; try lia.
-      by rewrite nth_cat (_ : k.*2 < size leaves) ?Hcont //; lia.
+    - rewrite upper_bound_iter_cont_equation Hsize.
+      have -> : (s.*2 + odd (size leaves) <= 1) = false by lia.
+      have -> : (size leaves)./2.*2 + odd (s.*2 + odd (size leaves)) = size leaves by lia.
+      have -> : (s.*2 + odd (size leaves))./2 = s by lia.
+      rewrite addnK Hsegtree ?nth_cat ?size_cat; try lia.
+      case (leqP (size leaves) k.*2) => [ ? /[1! Hcont] // /ltac:(lia) | ? ].
+      by case: ifP => ? /[1! Hcont] //; lia.
   Qed.
 
-  Corollary upper_bound_correspondence l r segtree leaves rest_nodes :
+  Corollary upper_bound_iter_correspondence l segtree leaves rest_nodes :
     valid_segtree leaves rest_nodes ->
-    r <= size leaves ->
-    l <= r ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
-    upper_bound l r leaves rest_nodes
-      = upper_bound' segtree (size leaves) l r.
+    l <= size leaves ->
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
+    upper_bound l leaves rest_nodes = upper_bound_iter segtree (size leaves) l.
   Proof.
-    rewrite /upper_bound /upper_bound' => ? ? ? ?.
-    apply /upper_bound_rec_correspondence => //.
-    elim: (size leaves) => // i ?.
-    rewrite expnS. lia.
+    rewrite /upper_bound /upper_bound_iter => ? ? ?.
+    apply /upper_bound_rec_correspondence => // ? ? ?.
+    by rewrite upper_bound_iter_cont_equation.
   Qed.
 
-  Corollary upper_bound'_correct m l r segtree leaves rest_nodes :
+  Corollary upper_bound_iter_correct m l segtree leaves rest_nodes :
     valid_segtree leaves rest_nodes ->
     (forall k, k <= size leaves ->
           P (\big[mul/idm]_(l <= i < k) nth idm leaves i) = (k <= m)) ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
-    r <= size leaves ->
-    m <= r ->
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
+    m <= size leaves ->
     l <= m ->
-    upper_bound' segtree (size leaves) l r
-      = (m, \big[mul/idm]_(l <= i < m) nth idm leaves i).
+    upper_bound_iter segtree (size leaves) l = (m, \big[mul/idm]_(l <= i < m) nth idm leaves i).
   Proof.
-    move => ? ? ? ? ? ?.
-    rewrite -(upper_bound_correspondence _ _ _ _ rest_nodes) //; try lia.
+    move => ? ? ? ? ?.
+    rewrite -(upper_bound_iter_correspondence _ _ _ rest_nodes) //; try lia.
     exact /upper_bound_correct.
   Qed.
 
-  Fixpoint lower_bound_rec {B} l r p leaves rest_nodes (cont : nat -> A -> B) :=
-    if r <= l
+  Fixpoint lower_bound_rec {B} r p leaves rest_nodes (cont : nat -> A -> B) :=
+    if r <= 0
     then cont r p
     else
       let p' := if odd r then nth idm leaves r.-1 * p else p in
@@ -353,8 +375,8 @@ Section Segtree.
       then cont r p
       else
         if rest_nodes is parents :: rest_nodes'
-        then lower_bound_rec (uphalf l) r./2 p' parents rest_nodes' (fun m p =>
-          if m.*2 <= l
+        then lower_bound_rec r./2 p' parents rest_nodes' (fun m p =>
+          if m.*2 <= 0
           then cont m.*2 p
           else
             let p' := nth idm leaves m.*2.-1 * p in
@@ -363,20 +385,19 @@ Section Segtree.
             else cont m.*2 p)
         else cont r p.
 
-  Definition lower_bound l r leaves rest_nodes := lower_bound_rec l r idm leaves rest_nodes pair.
+  Definition lower_bound r leaves rest_nodes := lower_bound_rec r idm leaves rest_nodes pair.
 
-  Lemma lower_bound_rec_correct B : forall rest_nodes m l r p leaves cont,
+  Lemma lower_bound_rec_correct B : forall rest_nodes m r p leaves cont,
     valid_segtree leaves rest_nodes ->
     (forall k, P ((\big[mul/idm]_(k <= i < r) nth idm leaves i) * p) = (m <= k)) ->
     r <= size leaves ->
     m <= r ->
-    l <= m ->
-    @lower_bound_rec B l r p leaves rest_nodes cont
+    @lower_bound_rec B r p leaves rest_nodes cont
       = cont m ((\big[mul/idm]_(m <= i < r) nth idm leaves i) * p).
   Proof.
-    elim => /= [ | parents ? IH ] m l r ? leaves ?
-         => [ /eqP -> ? | /andP [ /andP [ /eqP Hsize /forallP Hacc ] ? ] Hlb ? ? ? ].
-    { do 3 rewrite leqn0 => /eqP ->.
+    elim => /= [ | parents ? IH ] m r ? leaves ?
+         => [ /eqP -> ? | /andP [ /andP [ /eqP Hsize /forallP Hacc ] ? ] Hlb ? ? ].
+    { do 2 rewrite leqn0 => /eqP ->.
       by rewrite /= big_geq // Monoid.mul1m. }
     case: ifPn => ?.
     { rewrite (@anti_leq r m); try lia.
@@ -385,7 +406,7 @@ Section Segtree.
     case: ifPn => ?.
     { rewrite (@anti_leq r m); try lia.
       by rewrite big_geq // Monoid.mul1m. }
-    rewrite (IH (uphalf m)) => // [ | k | | | ]; try lia.
+    rewrite (IH (uphalf m)) => // [ | k | | ]; try lia.
     { rewrite (accumulated_product (nth idm parents) (nth idm leaves)) => [ | i ? ].
       - rewrite double_half double_uphalf Monoid.mulmA -big_cat_nat; try lia.
         case: ifPn => ?.
@@ -406,99 +427,123 @@ Section Segtree.
       by have /eqP := (Hacc (Ordinal Hbound)).
   Qed.
 
-  Corollary lower_bound_correct rest_nodes m l r leaves :
+  Corollary lower_bound_correct rest_nodes m r leaves :
     valid_segtree leaves rest_nodes ->
     (forall k, P ((\big[mul/idm]_(k <= i < r) nth idm leaves i)) = (m <= k)) ->
     r <= size leaves ->
     m <= r ->
-    l <= m ->
-    lower_bound l r leaves rest_nodes
-      = (m, (\big[mul/idm]_(m <= i < r) nth idm leaves i)).
+    lower_bound r leaves rest_nodes = (m, \big[mul/idm]_(m <= i < r) nth idm leaves i).
   Proof.
-    rewrite /lower_bound => ? Hlb ? ? ?.
+    rewrite /lower_bound => ? Hlb ? ?.
     by rewrite (lower_bound_rec_correct _ _ m) => // [ | ? ] /[1! Monoid.mulm1] => [ | /[1! Hlb] ].
   Qed.
 
-  Function lower_bound_rec' {B} segtree i m n l r p (cont : nat -> A -> B) :=
-    if i is i.+1
-    then
-      if r <= l
-      then cont r p
+  Function lower_bound_iter_cont segtree m n s r p {measure id s} :=
+    if s <= 1
+    then (r, p)
+    else
+      let m := m.*2 + lsb s in
+      let n := n - m in
+      if r.*2 <= 0
+      then lower_bound_iter_cont segtree m n s./2 r.*2 p
       else
-        let p' := if odd r then segtree (n + r.-1) * p else p in
-        if odd r && ~~ P p'
-        then cont r p
-        else lower_bound_rec' segtree i m./2 (n + m) (uphalf l) r./2 p' (fun k p =>
-          if k.*2 <= l
-          then cont k.*2 p
-          else
-            let p' := segtree (n + k.*2.-1) * p in
-            if P p'
-            then cont k.*2.-1 p'
-            else cont k.*2 p)
-    else cont r p.
-
-  Definition lower_bound' segtree m l r := lower_bound_rec' segtree m m 0 l r idm pair.
-
-  Lemma lower_bound_rec_correspondence B segtree : forall rest_nodes leaves n i l r p (cont cont' : nat -> A -> B),
-    valid_segtree leaves rest_nodes ->
-    size leaves < 2 ^ i ->
-    r <= size leaves ->
-    l <= r ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree (n + i) = nth idm (leaves ++ encode rest_nodes) i) ->
-    (forall k p, k <= r -> cont k p = cont' k p) ->
-    lower_bound_rec l r p leaves rest_nodes cont
-      = lower_bound_rec' segtree i (size leaves) n l r p cont'.
+        let p' := segtree (n + r.*2.-1) * p in
+        if P p'
+        then lower_bound_iter_cont segtree m n s./2 r.*2.-1 p'
+        else lower_bound_iter_cont segtree m n s./2 r.*2 p.
   Proof.
-    elim => /= [ | parents rest_nodes IH ] leaves n i l r p ? ?
-         => [ /eqP -> | /andP [ /andP [ /eqP Hsize Heq ] ? ] ];
-    case: i => [ /[1! expn0] /[1! ltnS] /ltac:(do 3 rewrite leqn0 => /eqP ->) ? -> //
-               | i /[1! expnS] ? ] /=.
-    - by (do 2 rewrite leqn0 => /eqP ->) => ? ->.
-    - move => /= ? ? Hsegtree Hcont.
-      case: ifPn => [ ? /[1! Hcont] // | ? ].
-      rewrite Hsegtree ?size_cat; try lia.
-      rewrite -Hsize nth_cat (_ : r.-1 < size leaves); try lia.
-      case: ifPn => [ /[1! Hcont] // | ? ].
-      apply /IH => //= [ | | | ? ? | k ? ? ]; try lia.
-      + rewrite -addnA Hsegtree ?size_cat; try lia.
-        by rewrite nth_cat ltnNge leq_addr addKn.
-      + case: ifPn => // [ /[1! Hcont] // /ltac:(lia) | ? ].
-        rewrite Hsegtree ?size_cat; try lia.
-        by rewrite nth_cat (_ : k.*2.-1 < size leaves) ?Hcont //; lia.
+    - lia.
+    - lia.
+    - lia.
+  Defined.
+
+  Function lower_bound_iter_rec segtree m n s r p {measure id r} :=
+    if r <= 0
+    then lower_bound_iter_cont segtree m n s r p
+    else
+      if odd r
+      then
+        let p' := segtree (n + r.-1) * p in
+        if P p'
+        then lower_bound_iter_rec segtree m./2 (n + m) (s.*2 + lsb m) r./2 p'
+        else lower_bound_iter_cont segtree m n s r p
+      else lower_bound_iter_rec segtree m./2 (n + m) (s.*2 + lsb m) r./2 p.
+  Proof.
+    - lia.
+    - lia.
+  Defined.
+
+  Definition lower_bound_iter segtree m r :=
+    lower_bound_iter_rec segtree m 0 1 r idm.
+
+  Lemma lower_bound_iter_rec_equation' segtree m n s r p :
+    lower_bound_iter_rec segtree m n s r p
+      = if r <= 0
+        then lower_bound_iter_cont segtree m n s r p
+        else
+          let p' := if odd r then segtree (n + r.-1) * p else p in
+          if odd r && ~~ P p'
+          then lower_bound_iter_cont segtree m n s r p
+          else lower_bound_iter_rec segtree m./2 (n + m) (s.*2 + odd m) r./2 p'.
+  Proof.
+    rewrite lower_bound_iter_rec_equation /=.
+    congr (if _ then _ else _).
+    case (boolP (odd r)) => //= ?.
+    by rewrite if_neg.
   Qed.
 
-  Corollary lower_bound_correspondence l r segtree leaves rest_nodes :
+  Lemma lower_bound_rec_correspondence segtree : forall rest_nodes leaves n s r p cont,
     valid_segtree leaves rest_nodes ->
+    0 < s ->
     r <= size leaves ->
-    l <= r ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
-    lower_bound l r leaves rest_nodes = lower_bound' segtree (size leaves) l r.
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree (n + i) = nth idm (leaves ++ encode rest_nodes) i) ->
+    (forall k p, k <= r -> cont k p = lower_bound_iter_cont segtree (size leaves) n s k p) ->
+    lower_bound_rec r p leaves rest_nodes cont
+      = lower_bound_iter_rec segtree (size leaves) n s r p.
   Proof.
-    rewrite /lower_bound /lower_bound' => ? ? ? ?.
-    apply /lower_bound_rec_correspondence => //.
-    elim: (size leaves) => // i ?.
-    rewrite expnS. lia.
+    elim => /= [ | parents rest_nodes IH ] leaves n s r p ? /[1! lower_bound_iter_rec_equation']
+         => /= [ /eqP -> ? /[1! leqn0] /eqP -> ? -> //
+              | /andP [ /andP [ /eqP Hsize Heq ] ? ] ? ? Hsegtree Hcont ].
+    case: ifPn => [ ? /[1! Hcont] // | ? ].
+    rewrite Hsegtree ?size_cat; try lia.
+    rewrite -Hsize nth_cat (_ : r.-1 < size leaves); try lia.
+    case: ifPn => [ /[1! Hcont] // | ? ].
+    apply /IH => //= [ | | ? ? | k ? ? ]; try lia.
+    + rewrite -addnA Hsegtree ?size_cat; try lia.
+      by rewrite nth_cat ltnNge leq_addr addKn.
+    + rewrite lower_bound_iter_cont_equation Hsize.
+      have -> : s.*2 + odd (size leaves) <= 1 = false by lia.
+      have -> : (size leaves)./2.*2 + odd (s.*2 + odd (size leaves)) = size leaves by lia.
+      have -> : (s.*2 + odd (size leaves))./2 = s by lia.
+      rewrite addnK Hsegtree ?size_cat; try lia.
+      rewrite nth_cat (_ : k.*2.-1 < size leaves); try lia.
+      case: ifPn => [ ? /[1! Hcont] // /ltac:(lia) | ? ].
+      by case: ifP => ? /[1! Hcont] //; lia.
   Qed.
 
-  Corollary lower_bound'_correct m l r segtree leaves rest_nodes :
+  Corollary lower_bound_correspondence r segtree leaves rest_nodes :
+    valid_segtree leaves rest_nodes ->
+    r <= size leaves ->
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
+    lower_bound r leaves rest_nodes = lower_bound_iter segtree (size leaves) r.
+  Proof.
+    rewrite /lower_bound /lower_bound_iter => ? ? ?.
+    exact /lower_bound_rec_correspondence.
+  Qed.
+
+  Corollary lower_bound_iter_correct m r segtree leaves rest_nodes :
     valid_segtree leaves rest_nodes ->
     (forall k, P ((\big[mul/idm]_(k <= i < r) nth idm leaves i)) = (m <= k)) ->
-    (forall i,
-      i < size leaves + size (encode rest_nodes) ->
-      segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
+    (forall i, i < size leaves + size (encode rest_nodes) ->
+          segtree i = nth idm (leaves ++ encode rest_nodes) i) ->
     r <= size leaves ->
     m <= r ->
-    l <= m ->
-    lower_bound' segtree (size leaves) l r
-      = (m, (\big[mul/idm]_(m <= i < r) nth idm leaves i)).
+    lower_bound_iter segtree (size leaves) r = (m, \big[mul/idm]_(m <= i < r) nth idm leaves i).
   Proof.
-    move => ? ? ? ? ? ?.
-    rewrite -(lower_bound_correspondence _ _ _ _ rest_nodes) //; try lia.
+    move => ? ? ? ? ?.
+    rewrite -(lower_bound_correspondence _ _ _ rest_nodes) //; try lia.
     exact /lower_bound_correct.
   Qed.
 End Segtree.
@@ -512,8 +557,9 @@ Extract Inlined Constant leq => "( <= )".
 Extract Inlined Constant addn => "( + )".
 Extract Inlined Constant subn => "( - )".
 Extract Inlined Constant Nat.pred => "pred".
-Extract Inlined Constant half => "(fun n -> n / 2)".
-Extract Inlined Constant double => "(fun n -> n + n)".
-Extract Inlined Constant odd => "(fun n -> 0 < n mod 2)".
-Extract Inlined Constant uphalf => "(fun n -> (n + 1) / 2)".
-Extraction "segtreeQueries.ml" product' upper_bound' lower_bound'.
+Extract Constant half => "fun n -> n / 2".
+Extract Constant double => "fun n -> n * 2".
+Extract Constant lsb => "fun n -> n mod 2".
+Extract Constant odd => "fun n -> n mod 2 = 1".
+Extract Constant uphalf => "fun n -> (n + 1) / 2".
+Extraction "segtreeQueries.ml" product_iter upper_bound_iter lower_bound_iter.
