@@ -1,6 +1,6 @@
 (copy_files tree/*.{ml,mli,v})
 (copy_files# graph/*.{ml,mli})
-(copy_files# container/*.{ml,mli})
+(copy_files container/*.{ml,mli,v})
 
 (coq.extraction
   (prelude Bsearch)
@@ -17,5 +17,9 @@
 (coq.extraction
   (prelude DoublingLca)
   (extracted_modules doublingLca))
+
+(coq.extraction
+  (prelude Segtree)
+  (extracted_modules segtreeQueries))
 
 (library (name compelib))
